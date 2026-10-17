@@ -157,7 +157,7 @@ MODELS: dict[str, dict[str, str]] = {
 }
 DEFAULT_MODEL = "nano_banana"
 UNLIMITED = artwork.UNLIMITED if artwork is not None else 10**9
-PROMPT_VERSION = 1
+PROMPT_VERSION = 2
 CUT_VERSION = 1
 NOTE_NO_KEY = "AI pictures need a fal.ai key: this widget's own, or the app's under Settings › Generative AI."
 
@@ -780,7 +780,7 @@ def make(job: Any) -> tuple[bytes, dict[str, Any]]:
     credit = (
         f"painted by {label} from its description"
         if t2i
-        else f"painted by {label} from a picture by {j.get('by') or 'NASA'} ({j.get('lic') or 'public domain'})"
+        else f"painted by {label} from a picture by {j.get('by') or 'a Commons contributor'} (Wikimedia Commons, {j.get('lic') or 'open licence'})"
     )
     meta = {
         "norad": j.get("norad"),

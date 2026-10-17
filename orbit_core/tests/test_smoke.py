@@ -173,10 +173,11 @@ def test_the_sky_geometry():
 
 def test_names_and_classes():
     assert SKY.classify(25544, "ISS (ZARYA)")[:2] == ("International Space Station", "station")
-    assert SKY.classify(22220, "SL-16 R/B")[:2] == ("SL-16 rocket body", "rocket")
+    assert SKY.classify(22220, "SL-16 R/B")[:2] == ("SL-16 rocket body", "rocket") and "Zenit" in SKY.classify(22220, "SL-16 R/B")[2]
+    assert SKY.ref_of(25544, "ISS (ZARYA)").startswith("File:STS-134") and SKY.ref_of(1, "COSMOS 1844") == SKY.TSELINA_REF and SKY.ref_of(2, "ARIANE 5 R/B").startswith("File:Ariane 5") and SKY.ref_of(3, "SL-16 R/B") == ""
     assert SKY.classify(12345, "COSMOS 1408")[:2] == ("Kosmos 1408", "satellite")
     name, cls, what, mag = SKY.classify(55, "SPACEMOBILE-004")
-    assert name == "Spacemobile-004" and cls == "satellite" and "satellite" in what and mag == 4.0
+    assert name == "Spacemobile-004" and cls == "satellite" and "BlueBird" in what and mag == 3.0
     assert SKY.classify(1, "MIDORI II (ADEOS-II)")[0] == "Midori II (ADEOS-II)" and SKY.classify(2, "NOAA 19")[0] == "NOAA 19" and SKY.classify(3, "ENVISAT")[0] == "Envisat"
 
 
@@ -245,19 +246,19 @@ def test_paintings_from_a_reference_and_from_words(tmp_path, offline):
             assert pr.get("image_urls") and pr["image_urls"][0].startswith("data:image/"), "the station from NASA's picture, handed over inline"
             assert "golden solar arrays" in pr["prompt"]
         else:
-            assert not pr.get("image_urls") and "rocket upper stage" in pr["prompt"]
+            assert not pr.get("image_urls") and "Zenit" in pr["prompt"]
     r = _ready(tonight, opts, tmp_path)
     assert all(p["pic"] and p["pic"]["kind"] == "painting" and not p["pic"]["whole"] for p in r["passes"])
     assert len(prompts) == len(names), "painted once"
     keys = [p.stem for p in P.gen_dir(tmp_path).glob("*.jpg")]
-    assert any(k.startswith("sat_25544--linocut") or k.startswith("sat_22220--linocut") for k in keys)
-    assert any("NASA" in p["pic"]["credit"] or "description" in p["pic"]["credit"] for p in r["passes"])
+    assert any(k.startswith("sat_25544--linocut--p2") or k.startswith("sat_22220--linocut--p2") for k in keys)
+    assert any("Wikimedia Commons" in p["pic"]["credit"] or "description" in p["pic"]["credit"] for p in r["passes"])
 
 
 def test_prompt_pieces_and_core():
     assert core.settings_of(None) == {}
-    assert P.key_for(25544, "poster") == "sat_25544--poster--p1"
-    assert P.key_for(25544, "poster", "limb", "below", "flux_kontext") == "sat_25544--poster--p1--bd_limb--v_below--m_flux_kontext"
+    assert P.key_for(25544, "poster") == "sat_25544--poster--p2"
+    assert P.key_for(25544, "poster", "limb", "below", "flux_kontext") == "sat_25544--poster--p2--bd_limb--v_below--m_flux_kontext"
     text = P.prompt_for({"style": "engraving", "name": "Hubble Space Telescope", "what": "the Hubble Space Telescope", "ref": "x", "backdrop": "sunrise"})
     assert "black, white and grey only" in text and "orbital sunrise" in text and "filling the frame" in text
     text = P.prompt_for({"style": "poster", "name": "SL-16 rocket body", "what": "a spent rocket upper stage", "view": "below"})

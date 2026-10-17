@@ -361,12 +361,8 @@ def fetch(
     for r in rows:
         pic: dict[str, Any] | None = None
         if pictures == "paintings":
-            known = SKY.KNOWN.get(int(r["norad"]), {})
-            ref = (
-                SKY.ref_src(str(known.get("ref") or ""), data_dir, ua)
-                if known.get("ref")
-                else {}
-            )
+            title_ref = SKY.ref_of(int(r["norad"]), str(r["name"]))
+            ref = SKY.ref_src(title_ref, data_dir, ua) if title_ref else {}
             key = P.key_for(int(r["norad"]), style, backdrop, view, model)
             payload = {
                 "norad": r["norad"],
@@ -378,8 +374,8 @@ def fetch(
                 "view": view,
                 "model": model,
                 "ref": ref.get("src") or "",
-                "by": known.get("by") or "",
-                "lic": known.get("lic") or "",
+                "by": ref.get("by") or "",
+                "lic": ref.get("lic") or "",
                 "link": ref.get("link") or "",
                 "ua": ua,
                 "aspect": "4:3",
