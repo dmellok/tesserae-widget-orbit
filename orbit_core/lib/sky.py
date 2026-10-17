@@ -37,6 +37,13 @@ def _sibling(name: str) -> Any:
 N = _sibling("net")
 SGP4 = _sibling("sgp4")
 
+try:
+    from app import (
+        commons,
+    )  # Tesserae 0.465+: the host looks pictures up on Commons for every widget
+except ImportError:  # an older Tesserae: the copy below
+    commons = None  # type: ignore[assignment]
+
 CELESTRAK = "https://celestrak.org/NORAD/elements/gp.php?GROUP={group}&FORMAT=json"
 COMMONS = "https://commons.wikimedia.org/w/api.php"
 GROUPS = {"stations": "stations", "bright": "visual"}
@@ -1043,6 +1050,13 @@ def ref_src(title: str, data_dir: Path, ua: str) -> dict[str, str]:
     the page credits the picture as Commons asks."""
     if not title:
         return {}
+    if commons is not None:
+        pic = commons.file(title, px=1200)
+        return (
+            {"src": pic["src"], "link": pic["link"], "by": pic["by"], "lic": pic["lic"]}
+            if pic
+            else {}
+        )
     cache = data_dir / "refs" / f"{N.slug(title)}.json"
     got = N.read_json(cache, None)
     if (

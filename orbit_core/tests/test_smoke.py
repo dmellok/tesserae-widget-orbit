@@ -81,6 +81,7 @@ def offline(monkeypatch):
         return None, "unreachable"
 
     monkeypatch.setattr(N, "http", fake_http)
+    monkeypatch.setattr(SKY, "commons", None)  # the widget's own lookup; the host's has its own test below
 
     def fake_fal(url, body, key, timeout):
         prompts.append({**body, "_url": url})
@@ -126,7 +127,7 @@ def _ready(widget, opts, tmp_path, settings=SETTINGS, timeout=30.0):
 def test_manifests_and_client_files():
     for wid in ("orbit_core", "orbit_pass", "orbit_tonight", "orbit_scene"):
         m = json.loads((ROOT / wid / "plugin.json").read_text(encoding="utf-8"))
-        assert m["version"] == "0.1.0" and m["tesserae_min"] == "0.463.0"
+        assert m["version"] == "0.1.1" and m["tesserae_min"] == "0.463.0"
         if m["kind"] == "widget":
             assert m["render"]["warm_ahead_s"] == 150 and (ROOT / wid / "client.js").exists()
             names = [o["name"] for o in m["cell_options"]]
@@ -267,3 +268,13 @@ def test_prompt_pieces_and_core():
     assert "pure white paper" in text and "foreshortened" in text and "contour line" in text
     how = P.build_how({"build_medium": "ink", "build_period": "atlas", "build_extra": "a comet in the corner"})
     assert how.startswith("a pen-and-ink drawing of the {kind}, in the manner of a seventeenth-century celestial atlas") and how.endswith("a comet in the corner")
+
+
+def test_the_hosts_commons_lookup_is_used_when_there(tmp_path, monkeypatch):
+    from app import commons as host_commons
+
+    monkeypatch.setattr(SKY, "commons", host_commons)
+    monkeypatch.setattr(host_commons, "file", lambda title, px=1400: {"title": title, "src": f"https://upload.wikimedia.org/{px}.jpg", "link": "https://commons.wikimedia.org/wiki/x", "by": "NASA", "lic": "Public domain", "w": 1200, "h": 800})
+    r = SKY.ref_src("File:HST-SM4.jpeg", tmp_path, "ua")
+    assert r == {"src": "https://upload.wikimedia.org/1200.jpg", "link": "https://commons.wikimedia.org/wiki/x", "by": "NASA", "lic": "Public domain"}
+    assert not (tmp_path / "refs").exists(), "nothing kept by the widget; the host keeps it"
