@@ -2,6 +2,8 @@
    names its page. The server hands over the passes with their paintings as data URIs, so
    nothing is fetched here; the page is markup, an SVG sky chart and CSS. */
 
+import { buildSheet } from './sheet.js';
+
 const PAPER = { cream: '#f3ead6', white: '#ffffff', aged: '#e9dcc0', blueprint: '#1d3f73', night: '#0b1020' };
 const INK = { cream: '#2a2116', white: '#111111', aged: '#2a2116', blueprint: '#eaf0f8', night: '#e8e6dc' };
 /* Silhouettes in a 200 by 200 box. */
@@ -104,6 +106,45 @@ function tonightPage(d) {
     </article>`).join('')}</div>${head(d, 'bottom')}${foot(d)}`;
 }
 
+/* To-night, packed: every object's cut-out on a lattice from the middle out, sized by what it
+   really is (the station a hundred metres across, a rocket stage ten), captioned with its pass. */
+const SIZE_M = { station: 109, telescope: 13, satellite: 8, rocket: 11, other: 6 };
+const SIL_URL = (cls) => 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="400" height="400" fill="#7a7a7a"><path d="${SIL[cls] || SIL.other}"/></svg>`);
+
+async function packTonight(d) {
+  const w = d.cell_w || 800, h = d.cell_h || 480;
+  const seen = new Set();
+  const specimens = [];
+  for (const p of d.passes) {
+    if (seen.has(p.norad)) continue;  // one picture per object, however many passes
+    seen.add(p.norad);
+    const pic = p.pic || {};
+    const src = pic.src || SIL_URL(p.cls);
+    const whole = !!pic.src && !!pic.whole;
+    specimens.push({
+      name: String(p.norad), sci: p.shown_name, src, cut: whole ? null : src, on_paper: false, classic: false, whole, neutral: false, no_flip: true,
+      factor: Math.pow((SIZE_M[p.cls] || 8) / 30, 0.35), aspect: pic.aspect > 0 ? pic.aspect : 2, paper: null,
+      lines: [p.shown_name, `${p.day} · ${p.start_local}`, `${p.peak_el}° in the ${p.peak_dir}`, p.bright],
+    });
+  }
+  const label = Math.max(0.017, 13 / h) * ((Number(d.text_size) || 100) / 100);
+  const zoom = Math.max(0.4, Math.min(1, (Number(d.scale) || 100) / 100));
+  const dark = d.paper === 'night' || d.paper === 'blueprint';
+  try {
+    return await buildSheet({ specimens, ratio: w / h, size: 1400, label, paper: d.paper === 'white' ? 'white' : d.paper === 'aged' ? 'aged' : dark ? 'white' : 'cream', ink: INK[d.paper] || INK.cream, layout: 'cluster', facing: 'inward', zoom, transparent: dark });
+  } catch (e) { console.warn('orbit: packing failed', e); return null; }
+}
+
+function packedPage(d, made) {
+  const tags = made.items.map((m) => {
+    const ls = m.lines || [];
+    if (!ls.length) return '';
+    return `<span class="sh-l" style="left:${(m.at[0] * 100).toFixed(2)}%;top:${(m.at[1] * 100).toFixed(2)}%"><span class="sh-ln sh-name">${esc(ls[0])}</span>${ls.slice(1).map((t) => `<span class="sh-ln sh-sm">${esc(t)}</span>`).join('')}</span>`;
+  }).join('');
+  const page = `<div class="sh-page" style="--r:${made.ratio};--lf:${made.label}"><img src="${made.src}" alt="" decoding="sync">${tags}</div>`;
+  return `${head(d)}<div class="sh">${page}</div>${head(d, 'bottom')}${foot(d)}`;
+}
+
 /* The scene: one whole painting across the page, the pass written over it. */
 function scenePage(d) {
   const p = d.passes[0];
@@ -123,7 +164,11 @@ export async function render(shadow, ctx, widget) {
   else if (d.state === 'computing') body = message(d, d.title || 'Orbit', 'Working out the passes.', d.hint);
   else {
     for (const p of d.passes) if (p.pic && p.pic.src) await predecode(p.pic.src);
-    body = widget === 'tonight' ? tonightPage(d) : widget === 'scene' ? scenePage(d) : passPage(d);
+    if (widget === 'tonight' && d.layout === 'cluster' && typeof document !== 'undefined') {
+      const made = await packTonight(d);
+      if (made && made.src) { await predecode(made.src); body = packedPage(d, made); }
+      else body = tonightPage(d);
+    } else body = widget === 'tonight' ? tonightPage(d) : widget === 'scene' ? scenePage(d) : passPage(d);
   }
   const paper = PAPER[d.paper] || PAPER.cream;
   const ink = INK[d.paper] || INK.cream;
@@ -179,6 +224,13 @@ export async function render(shadow, ctx, widget) {
       .pa-dome { grid-column: 2; grid-row: 3; width: 28cqmin; height: 28cqmin; } .pa.portrait .pa-dome { width: 34cqmin; height: 34cqmin; }
       .pa-note dl { grid-column: 1; grid-row: 3; margin: .6cqmin 0 0; display: grid; grid-template-columns: auto 1fr; gap: .5cqmin 1.4cqmin; font-size: calc(var(--ts) * 2.4cqmin); align-content: start; min-width: 0; }
       .pa-note dt { font-family: var(--sc); letter-spacing: .08em; font-size: .8em; opacity: .8; padding-top: .3em; } .pa-note dd { margin: 0; }
+      /* to-night, packed */
+      .sh { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 0 .6cqmin; }
+      .sh-page { position: relative; aspect-ratio: var(--r); max-width: 100%; max-height: 100%; width: min(100%, calc((100cqh - 9cqmin) * var(--r))); container-type: size; }
+      .sh-page > img { display: block; width: 100%; height: 100%; }
+      .ob.dark .sh-page > img { mix-blend-mode: screen; }
+      .sh-l { position: absolute; transform: translate(-50%, 12%); white-space: nowrap; text-align: center; line-height: 1.15; font-family: var(--sc); font-size: calc(var(--lf) * 100cqh); letter-spacing: .04em; color: var(--ink); --halo: var(--paper); text-shadow: .06em 0 0 var(--halo), -.06em 0 0 var(--halo), 0 .06em 0 var(--halo), 0 -.06em 0 var(--halo), .045em .045em 0 var(--halo), -.045em .045em 0 var(--halo), .045em -.045em 0 var(--halo), -.045em -.045em 0 var(--halo); }
+      .sh-ln { display: block; } .sh-sm { font-family: var(--serif); font-style: italic; letter-spacing: 0; font-size: .88em; opacity: .85; }
       /* to-night */
       .tn-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(var(--cols), 1fr); grid-auto-rows: 1fr; gap: 1cqmin 2cqmin; padding: 1cqmin 2.4cqmin; }
       .tn-row { display: grid; grid-template-columns: 22% 1fr 22%; gap: 1.5cqmin; align-items: center; min-height: 0; border-bottom: 1px solid color-mix(in srgb, var(--ink) 25%, transparent); padding: .4cqmin 0; }

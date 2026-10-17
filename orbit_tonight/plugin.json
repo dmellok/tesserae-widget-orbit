@@ -602,6 +602,37 @@
       "help": "All on fal.ai. Nano Banana is faithful and cheap; Nano Banana Pro and FLUX follow the more abstract styles further."
     },
     {
+      "name": "layout",
+      "type": "select",
+      "label": "Layout",
+      "default": "rows",
+      "choices": [
+        {
+          "value": "rows",
+          "label": "Rows: each pass with its picture and sky chart"
+        },
+        {
+          "value": "cluster",
+          "label": "Cluster: the objects packed on the page, sized as they are, captioned"
+        }
+      ],
+      "help": "The cluster packs each object's painting or silhouette as large as the page allows, the station a hundred metres across and a rocket stage ten, with its next pass captioned beneath."
+    },
+    {
+      "name": "scale",
+      "type": "slider",
+      "label": "Scale",
+      "default": 100,
+      "min": 40,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "help": "How far the cluster runs out to the margins.",
+      "show_if": {
+        "layout": "cluster"
+      }
+    },
+    {
       "name": "chart",
       "type": "select",
       "label": "Sky chart",

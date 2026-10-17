@@ -48,6 +48,8 @@ HERO_PX = 1400
 COMPUTE_S = 8
 LOOK_OPTIONS = frozenset(
     (
+        "layout",
+        "scale",
         "font",
         "pictures",
         "style",
@@ -283,6 +285,8 @@ def fetch(
         "backdrop": backdrop,
         "font_css": N.font_css(("im_fell", "im_fell_sc", "archivo_narrow")),
         "font": _choice(options.get("font"), FONTS),
+        "layout": _choice(options.get("layout"), ("rows", "cluster"), "rows"),
+        "scale": _int(options.get("scale"), 100, 40, 100),
         "min_el": int(min_el),
     }
     if not place:

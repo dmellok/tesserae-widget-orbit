@@ -85,7 +85,10 @@ WIDGETS = {
         "name": "Orbit: To-night",
         "icon": "ph-shooting-star",
         "description": "Every visible pass over your place in the next day, in order: the station and the bright satellites, each with its small painting and a sky chart of its path, the times, the directions and how bright. Worked out on your server from CelesTrak's element sets, no key.",
-        "options": lambda: where_options() + [{"name": "count", "type": "number", "label": "How many", "default": 6, "help": "1 to 10."}] + picture_options(False) + page_options(),
+        "options": lambda: where_options() + [{"name": "count", "type": "number", "label": "How many", "default": 6, "help": "1 to 10."}] + picture_options(False) + [
+            sel("layout", "Layout", "rows", [("rows", "Rows: each pass with its picture and sky chart"), ("cluster", "Cluster: the objects packed on the page, sized as they are, captioned")], help="The cluster packs each object's painting or silhouette as large as the page allows, the station a hundred metres across and a rocket stage ten, with its next pass captioned beneath."),
+            {"name": "scale", "type": "slider", "label": "Scale", "default": 100, "min": 40, "max": 100, "step": 5, "unit": "%", "help": "How far the cluster runs out to the margins.", "show_if": {"layout": "cluster"}},
+        ] + page_options(),
     },
     "orbit_scene": {
         "name": "Orbit: Scene",

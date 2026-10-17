@@ -5,7 +5,7 @@ Three Tesserae widgets for what passes over your place to-night, the station and
 | widget | the page |
 |---|---|
 | **Orbit: Pass** | the best pass coming: the spacecraft painted in a ruled frame, a sky chart of its path with the rise and set times, and the particulars |
-| **Orbit: To-night** | every visible pass in the next day, in order, each with its small painting and sky chart |
+| **Orbit: To-night** | every visible pass in the next day, in order, each with its small painting and sky chart; or the objects packed on the page as a cluster, sized as they really are, the station a hundred metres across and a rocket stage ten |
 | **Orbit: Scene** | one whole painting across the page, the pass written over it |
 
 **Passes** are worked out on your server from CelesTrak's element sets (no key): the space stations, or the stations and the hundred-odd brightest objects. A bundled SGP4 propagator, checked against the reference implementation to within a tenth of a metre, carries each object across the next day and a half; a pass counts when the observer is in the dark, the object is in sunlight and it climbs above the elevation you choose. The work takes a couple of seconds in the background once every three hours; the first page after a start says it is working and fills within a minute. Times are local to the place, with the rise and set directions, how high, how long, and how bright: as bright as Venus for the station down to a faint moving star for a rocket body.
