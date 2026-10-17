@@ -1,0 +1,825 @@
+{
+  "tesserae_compat": "1.x",
+  "name": "Orbit: Pass",
+  "version": "0.1.0",
+  "kind": "widget",
+  "tesserae_min": "0.463.0",
+  "description": "The best pass over your place to-night: the station or the brightest satellite coming, painted in a ruled frame, with a sky chart of its path, the rise and set times and directions, how high and how bright. Passes worked out on your server from CelesTrak's element sets, no key.",
+  "icon": "ph-planet",
+  "supports": {
+    "sizes": [
+      "sm",
+      "md",
+      "lg"
+    ]
+  },
+  "requires": [
+    "network:*",
+    "settings:plugin/orbit_core",
+    "plugin:orbit_core"
+  ],
+  "render": {
+    "needs_network": true,
+    "warm_ahead_s": 150
+  },
+  "design": {
+    "palette": "extended"
+  },
+  "cell_options": [
+    {
+      "name": "location",
+      "type": "location_search",
+      "label": "Place",
+      "default": "",
+      "help": "Where you will be looking up from; the times are the place's own. Falls back to the app's location."
+    },
+    {
+      "name": "which",
+      "type": "select",
+      "label": "Which objects",
+      "default": "bright",
+      "choices": [
+        {
+          "value": "bright",
+          "label": "The stations and the brightest satellites (CelesTrak's visual list)"
+        },
+        {
+          "value": "stations",
+          "label": "The space stations only"
+        }
+      ],
+      "help": "The visual list is the hundred-odd objects bright enough to see with the eye: the stations, Hubble, big satellites and spent rocket stages."
+    },
+    {
+      "name": "min_el",
+      "type": "select",
+      "label": "At least this high",
+      "default": "20",
+      "choices": [
+        {
+          "value": "10",
+          "label": "10° (low over the horizon)"
+        },
+        {
+          "value": "20",
+          "label": "20°"
+        },
+        {
+          "value": "30",
+          "label": "30°"
+        },
+        {
+          "value": "45",
+          "label": "45° (high overhead)"
+        }
+      ],
+      "help": "A pass counts when the object climbs at least this high while lit and the sky is dark."
+    },
+    {
+      "name": "hours",
+      "type": "select",
+      "label": "Looking ahead",
+      "default": "24",
+      "choices": [
+        {
+          "value": "12",
+          "label": "12 hours"
+        },
+        {
+          "value": "24",
+          "label": "24 hours"
+        },
+        {
+          "value": "36",
+          "label": "36 hours"
+        }
+      ]
+    },
+    {
+      "name": "pictures",
+      "type": "select",
+      "label": "Pictures",
+      "default": "paintings",
+      "choices": [
+        {
+          "value": "paintings",
+          "label": "AI paintings, each object once"
+        },
+        {
+          "value": "silhouettes",
+          "label": "Silhouettes"
+        }
+      ],
+      "help": "AI paintings paint each object once in the style below, from a NASA photograph for the station and Hubble and from its description otherwise, at about US$0.04 a painting; needs a fal.ai key. Silhouettes cost nothing."
+    },
+    {
+      "name": "style",
+      "type": "select",
+      "label": "Style",
+      "default": "poster",
+      "choices": [
+        {
+          "value": "poster",
+          "label": "Space-age poster"
+        },
+        {
+          "value": "engraving_colour",
+          "label": "Hand-coloured engraving"
+        },
+        {
+          "value": "engraving",
+          "label": "Black-ink engraving"
+        },
+        {
+          "value": "technical",
+          "label": "Engineering drawing"
+        },
+        {
+          "value": "watercolour",
+          "label": "Loose watercolour"
+        },
+        {
+          "value": "woodblock",
+          "label": "Japanese woodblock print"
+        },
+        {
+          "value": "linocut",
+          "label": "Linocut"
+        },
+        {
+          "value": "deco",
+          "label": "Art Deco"
+        },
+        {
+          "value": "midcentury",
+          "label": "Mid-century flat illustration"
+        },
+        {
+          "value": "pencil",
+          "label": "Pencil study"
+        },
+        {
+          "value": "blueprint",
+          "label": "Blueprint"
+        },
+        {
+          "value": "cutaway",
+          "label": "Magazine cutaway"
+        },
+        {
+          "value": "stamp",
+          "label": "Postage stamp"
+        },
+        {
+          "value": "riso",
+          "label": "Risograph"
+        },
+        {
+          "value": "pixel",
+          "label": "Pixel art"
+        },
+        {
+          "value": "lowpoly",
+          "label": "Low-poly render"
+        },
+        {
+          "value": "papercraft",
+          "label": "Paper craft"
+        },
+        {
+          "value": "toybrick",
+          "label": "Toy bricks"
+        },
+        {
+          "value": "charcoal",
+          "label": "Charcoal"
+        },
+        {
+          "value": "stained_glass",
+          "label": "Stained glass"
+        },
+        {
+          "value": "gilt",
+          "label": "Illuminated manuscript"
+        },
+        {
+          "value": "pulp",
+          "label": "Pulp cover"
+        },
+        {
+          "value": "synthwave",
+          "label": "Synthwave"
+        },
+        {
+          "value": "chalk",
+          "label": "Chalkboard"
+        },
+        {
+          "value": "atlas",
+          "label": "Celestial atlas"
+        },
+        {
+          "value": "builder",
+          "label": "Build my own"
+        },
+        {
+          "value": "custom",
+          "label": "Your own prompt"
+        }
+      ],
+      "show_if": {
+        "pictures": "paintings"
+      }
+    },
+    {
+      "name": "custom_style",
+      "type": "textarea",
+      "label": "Your own prompt",
+      "default": "",
+      "show_if": {
+        "pictures": "paintings",
+        "style": "custom"
+      },
+      "presets": [
+        {
+          "label": "Gouache poster",
+          "value": "a vintage space-age poster in gouache: flat confident shapes, a palette of deep blue, silver and vermilion, crisp edges"
+        },
+        {
+          "label": "Cutaway",
+          "value": "a 1960s magazine cutaway illustration: the spacecraft opened to show its modules and crew, labelled in small neat capitals"
+        },
+        {
+          "label": "Chalk pastel",
+          "value": "a chalk pastel drawing on grey paper, soft and smudgy, with the sun catching the solar panels"
+        },
+        {
+          "label": "Space art",
+          "value": "a traditional painting in the manner of classic space art: dramatic sunlight, the Earth's limb below, confident brushwork"
+        },
+        {
+          "label": "Comic ink",
+          "value": "a comic-book ink drawing with bold outlines, hatched shadows and flat halftone colour"
+        },
+        {
+          "label": "Neon line",
+          "value": "a single-weight neon line drawing on white: one continuous glowing line describing the spacecraft"
+        }
+      ],
+      "help": "The medium and the look; the widget adds the spacecraft and the paper. Pick an example above to start from."
+    },
+    {
+      "name": "build_medium",
+      "type": "select",
+      "label": "Medium",
+      "default": "gouache",
+      "choices": [
+        {
+          "value": "gouache",
+          "label": "Gouache"
+        },
+        {
+          "value": "watercolour",
+          "label": "Watercolour"
+        },
+        {
+          "value": "oil",
+          "label": "Oil paint"
+        },
+        {
+          "value": "pastel",
+          "label": "Soft pastel"
+        },
+        {
+          "value": "coloured_pencil",
+          "label": "Coloured pencil"
+        },
+        {
+          "value": "pencil",
+          "label": "Graphite pencil"
+        },
+        {
+          "value": "ink",
+          "label": "Pen and ink"
+        },
+        {
+          "value": "engraving",
+          "label": "Engraving"
+        },
+        {
+          "value": "lithograph",
+          "label": "Lithograph"
+        },
+        {
+          "value": "woodblock",
+          "label": "Woodblock"
+        },
+        {
+          "value": "linocut",
+          "label": "Linocut"
+        },
+        {
+          "value": "screenprint",
+          "label": "Screen print"
+        },
+        {
+          "value": "vector",
+          "label": "Flat vector"
+        },
+        {
+          "value": "airbrush",
+          "label": "Airbrush"
+        },
+        {
+          "value": "papercut",
+          "label": "Paper cut"
+        }
+      ],
+      "show_if": {
+        "pictures": "paintings",
+        "style": "builder"
+      }
+    },
+    {
+      "name": "build_period",
+      "type": "select",
+      "label": "Period or school",
+      "default": "",
+      "choices": [
+        {
+          "value": "",
+          "label": "None in particular"
+        },
+        {
+          "value": "1950s",
+          "label": "1950s science-fiction cover"
+        },
+        {
+          "value": "1960s",
+          "label": "1960s space-age poster"
+        },
+        {
+          "value": "victorian",
+          "label": "Victorian technical plate"
+        },
+        {
+          "value": "atlas",
+          "label": "Celestial atlas"
+        },
+        {
+          "value": "bauhaus",
+          "label": "Bauhaus"
+        },
+        {
+          "value": "ukiyoe",
+          "label": "Ukiyo-e"
+        },
+        {
+          "value": "deco",
+          "label": "Art Deco"
+        },
+        {
+          "value": "retrofuture",
+          "label": "Retro-futurism"
+        }
+      ],
+      "show_if": {
+        "pictures": "paintings",
+        "style": "builder"
+      }
+    },
+    {
+      "name": "build_palette",
+      "type": "select",
+      "label": "Palette",
+      "default": "",
+      "choices": [
+        {
+          "value": "",
+          "label": "As it is"
+        },
+        {
+          "value": "limited",
+          "label": "A few warm tones"
+        },
+        {
+          "value": "muted",
+          "label": "Muted"
+        },
+        {
+          "value": "vivid",
+          "label": "Vivid"
+        },
+        {
+          "value": "duotone",
+          "label": "Two inks"
+        },
+        {
+          "value": "mono",
+          "label": "Black and white"
+        },
+        {
+          "value": "sepia",
+          "label": "Sepia"
+        }
+      ],
+      "show_if": {
+        "pictures": "paintings",
+        "style": "builder"
+      }
+    },
+    {
+      "name": "build_line",
+      "type": "select",
+      "label": "Line",
+      "default": "",
+      "choices": [
+        {
+          "value": "",
+          "label": "As the medium has it"
+        },
+        {
+          "value": "fine",
+          "label": "Fine"
+        },
+        {
+          "value": "bold",
+          "label": "Bold"
+        },
+        {
+          "value": "none",
+          "label": "No outlines"
+        },
+        {
+          "value": "sketchy",
+          "label": "Sketchy"
+        }
+      ],
+      "show_if": {
+        "pictures": "paintings",
+        "style": "builder"
+      }
+    },
+    {
+      "name": "build_texture",
+      "type": "select",
+      "label": "Texture",
+      "default": "",
+      "choices": [
+        {
+          "value": "",
+          "label": "As the medium has it"
+        },
+        {
+          "value": "paper",
+          "label": "Paper grain"
+        },
+        {
+          "value": "print",
+          "label": "Print texture"
+        },
+        {
+          "value": "smooth",
+          "label": "Smooth"
+        },
+        {
+          "value": "halftone",
+          "label": "Halftone"
+        }
+      ],
+      "show_if": {
+        "pictures": "paintings",
+        "style": "builder"
+      }
+    },
+    {
+      "name": "build_mood",
+      "type": "select",
+      "label": "Mood",
+      "default": "",
+      "choices": [
+        {
+          "value": "",
+          "label": "Plain"
+        },
+        {
+          "value": "heroic",
+          "label": "Heroic"
+        },
+        {
+          "value": "calm",
+          "label": "Calm"
+        },
+        {
+          "value": "nostalgic",
+          "label": "Nostalgic"
+        },
+        {
+          "value": "technical",
+          "label": "Precise"
+        }
+      ],
+      "show_if": {
+        "pictures": "paintings",
+        "style": "builder"
+      }
+    },
+    {
+      "name": "build_extra",
+      "type": "string",
+      "label": "Your own words",
+      "default": "",
+      "show_if": {
+        "pictures": "paintings",
+        "style": "builder"
+      },
+      "help": "Added to the style: for example, with a little gold leaf on the solar panels."
+    },
+    {
+      "name": "backdrop",
+      "type": "select",
+      "label": "Backdrop",
+      "default": "none",
+      "choices": [
+        {
+          "value": "none",
+          "label": "None: the spacecraft alone, cut out on the page"
+        },
+        {
+          "value": "space",
+          "label": "Black space and stars"
+        },
+        {
+          "value": "limb",
+          "label": "Above the Earth's limb"
+        },
+        {
+          "value": "earth",
+          "label": "Over the Earth by day"
+        },
+        {
+          "value": "night",
+          "label": "Over the Earth by night"
+        },
+        {
+          "value": "sunrise",
+          "label": "Orbital sunrise"
+        },
+        {
+          "value": "ornate",
+          "label": "Ornate framed plate"
+        }
+      ],
+      "show_if": {
+        "pictures": "paintings"
+      },
+      "help": "None keeps the spacecraft alone on the page, cut out. The rest paint a whole picture that fills its frame, in the same style."
+    },
+    {
+      "name": "view",
+      "type": "select",
+      "label": "View",
+      "default": "side",
+      "choices": [
+        {
+          "value": "side",
+          "label": "From the side, a little below"
+        },
+        {
+          "value": "quarter",
+          "label": "From a front quarter, a little above"
+        },
+        {
+          "value": "below",
+          "label": "From below, as it passes over you"
+        },
+        {
+          "value": "above",
+          "label": "From above, the Earth beyond"
+        }
+      ],
+      "show_if": {
+        "pictures": "paintings"
+      }
+    },
+    {
+      "name": "model",
+      "type": "select",
+      "label": "Model",
+      "default": "nano_banana",
+      "choices": [
+        {
+          "value": "nano_banana",
+          "label": "Nano Banana (about US$0.04)"
+        },
+        {
+          "value": "nano_banana_pro",
+          "label": "Nano Banana Pro (about US$0.15)"
+        },
+        {
+          "value": "flux_kontext",
+          "label": "FLUX.1 Kontext Pro (about US$0.04)"
+        },
+        {
+          "value": "gpt_image",
+          "label": "GPT Image 2 (about US$0.05)"
+        },
+        {
+          "value": "seedream",
+          "label": "Seedream 4 (about US$0.03)"
+        }
+      ],
+      "show_if": {
+        "pictures": "paintings"
+      },
+      "help": "All on fal.ai. Nano Banana is faithful and cheap; Nano Banana Pro and FLUX follow the more abstract styles further."
+    },
+    {
+      "name": "chart",
+      "type": "select",
+      "label": "Sky chart",
+      "default": "dome",
+      "choices": [
+        {
+          "value": "dome",
+          "label": "The sky as a dome, north up, the path drawn across it"
+        },
+        {
+          "value": "none",
+          "label": "No chart"
+        }
+      ]
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "label": "Title",
+      "default": "",
+      "help": "Blank uses the place."
+    },
+    {
+      "name": "header",
+      "type": "select",
+      "label": "Title line",
+      "default": "top",
+      "choices": [
+        {
+          "value": "top",
+          "label": "Above the page"
+        },
+        {
+          "value": "bottom",
+          "label": "Below the page"
+        },
+        {
+          "value": "hidden",
+          "label": "Hidden"
+        }
+      ]
+    },
+    {
+      "name": "footer",
+      "type": "select",
+      "label": "Foot of the page",
+      "default": "show",
+      "choices": [
+        {
+          "value": "show",
+          "label": "Status and credits"
+        },
+        {
+          "value": "credits",
+          "label": "Credits only"
+        },
+        {
+          "value": "hide",
+          "label": "Nothing"
+        }
+      ]
+    },
+    {
+      "name": "paper",
+      "type": "select",
+      "label": "Paper",
+      "default": "cream",
+      "choices": [
+        {
+          "value": "cream",
+          "label": "Cream"
+        },
+        {
+          "value": "white",
+          "label": "White"
+        },
+        {
+          "value": "aged",
+          "label": "Aged"
+        },
+        {
+          "value": "blueprint",
+          "label": "Blueprint: pale ink on blue"
+        },
+        {
+          "value": "night",
+          "label": "Night: pale ink on near-black"
+        }
+      ]
+    },
+    {
+      "name": "panel",
+      "type": "select",
+      "label": "Panel",
+      "default": "colour",
+      "choices": [
+        {
+          "value": "colour",
+          "label": "Colour"
+        },
+        {
+          "value": "gray16",
+          "label": "16 greys"
+        },
+        {
+          "value": "gray4",
+          "label": "4 greys"
+        },
+        {
+          "value": "mono",
+          "label": "Black and white"
+        }
+      ],
+      "help": "What the panel can show. Pictures are converted and contrast-stretched to match."
+    },
+    {
+      "name": "text_size",
+      "type": "select",
+      "label": "Text size",
+      "default": "100",
+      "choices": [
+        {
+          "value": "60",
+          "label": "60%"
+        },
+        {
+          "value": "80",
+          "label": "80%"
+        },
+        {
+          "value": "100",
+          "label": "100%"
+        },
+        {
+          "value": "125",
+          "label": "125%"
+        },
+        {
+          "value": "150",
+          "label": "150%"
+        }
+      ]
+    },
+    {
+      "name": "font",
+      "type": "select",
+      "label": "Type",
+      "default": "fell",
+      "choices": [
+        {
+          "value": "fell",
+          "label": "IM Fell English: the old plate"
+        },
+        {
+          "value": "archivo",
+          "label": "Archivo Narrow: clean and plain"
+        },
+        {
+          "value": "georgia",
+          "label": "Georgia: a modern serif"
+        },
+        {
+          "value": "page",
+          "label": "The dashboard's own font"
+        }
+      ]
+    }
+  ],
+  "data_schema": {
+    "fields": [
+      {
+        "name": "title",
+        "type": "str",
+        "label": "Title"
+      },
+      {
+        "name": "found",
+        "type": "num",
+        "label": "Passes in the window"
+      },
+      {
+        "name": "passes",
+        "type": "arr",
+        "label": "Passes shown"
+      }
+    ]
+  }
+}

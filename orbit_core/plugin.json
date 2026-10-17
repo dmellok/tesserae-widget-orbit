@@ -1,0 +1,57 @@
+{
+  "tesserae_compat": "1.x",
+  "tesserae_min": "0.463.0",
+  "name": "Orbit Core",
+  "version": "0.1.0",
+  "kind": "data",
+  "description": "The settings and the paintings page for the Orbit widgets (orbit_pass, orbit_tonight, orbit_scene): the fal.ai key, the daily painting budget and a contact for CelesTrak and Wikimedia Commons. No widget of its own.",
+  "icon": "ph-planet",
+  "supports": {
+    "sizes": []
+  },
+  "requires": [
+    "network:*"
+  ],
+  "settings": [
+    {
+      "name": "fal_api_key",
+      "type": "string",
+      "label": "fal.ai API key (AI paintings)",
+      "secret": true,
+      "default": "",
+      "help": "With a key the widgets can paint each object once, at about US$0.04 a painting. Leave it blank to use the key under Settings › Generative AI. Without either the widgets show silhouettes."
+    },
+    {
+      "name": "contact",
+      "type": "string",
+      "label": "Contact for CelesTrak and Wikimedia Commons",
+      "default": "",
+      "help": "An email address or a web page, sent in the widget's User-Agent. The widget names its own project page by default."
+    },
+    {
+      "name": "gen_daily_usd",
+      "type": "slider",
+      "label": "Painting budget per day",
+      "default": 2,
+      "min": 0,
+      "max": 30,
+      "step": 1,
+      "unit": "US$",
+      "help": "The most the widgets may spend on new paintings in a day, at the models' listed prices. 0 is no limit, within the ceiling under Settings › Generative AI. The visual list is a fixed hundred-odd objects, so a style is painted out in a few weeks and then costs nothing."
+    },
+    {
+      "name": "gen_per_refresh",
+      "type": "number",
+      "label": "New paintings started per preview",
+      "default": 3,
+      "help": "How many new paintings one settled preview in the editor may start (1 to 50)."
+    },
+    {
+      "name": "gen_parallel",
+      "type": "number",
+      "label": "Paintings made at once",
+      "default": 3,
+      "help": "How many paintings fal.ai works on side by side (1 to 8)."
+    }
+  ]
+}
