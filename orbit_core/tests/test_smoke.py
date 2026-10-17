@@ -177,6 +177,7 @@ def test_names_and_classes():
     assert SKY.classify(12345, "COSMOS 1408")[:2] == ("Kosmos 1408", "satellite")
     name, cls, what, mag = SKY.classify(55, "SPACEMOBILE-004")
     assert name == "Spacemobile-004" and cls == "satellite" and "satellite" in what and mag == 4.0
+    assert SKY.classify(1, "MIDORI II (ADEOS-II)")[0] == "Midori II (ADEOS-II)" and SKY.classify(2, "NOAA 19")[0] == "NOAA 19" and SKY.classify(3, "ENVISAT")[0] == "Envisat"
 
 
 def test_elements_skip_debris_and_duplicates(tmp_path, offline):

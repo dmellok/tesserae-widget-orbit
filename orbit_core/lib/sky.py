@@ -188,14 +188,38 @@ def classify(norad: int, name: str) -> tuple[str, str, str, float]:
         )
     if "ISS" in up or "CSS" in up or "TIANGONG" in up:
         return n.title(), "station", CLASS_WHAT["station"], CLASS_MAG["station"]
-    nice = re.sub(r"\s+", " ", n).title()
-    nice = re.sub(r"\b(\d+)([A-Z])\b", lambda m: m.group(1) + m.group(2).upper(), nice)
+    nice = _nice_name(n)
     return (
         nice,
         "satellite",
         f"the {nice} satellite, {CLASS_WHAT['satellite']}",
         CLASS_MAG["satellite"],
     )
+
+
+def _nice_name(n: str) -> str:
+    """ADEOS-II, MIDORI II, NOAA 19, H-2A: capitals become a name, with roman
+    numerals, short designators and anything with digits left in capitals."""
+
+    numbered = bool(re.search(r"\d", n))  # NOAA 19, GOES 17: an agency's letters before a number
+
+    def piece(w: str) -> str:
+        if (
+            re.fullmatch(r"[IVX]+", w)
+            or re.search(r"\d", w)
+            or (len(w) <= (4 if numbered else 3) and w.isalpha() and w.isupper())
+        ):
+            return w
+        return w[:1].upper() + w[1:].lower()
+
+    out = []
+    for w in re.sub(r"\s+", " ", n).split(" "):
+        lead = w[: len(w) - len(w.lstrip("("))]
+        trail = w[len(w.rstrip(")")) :]
+        core = w[len(lead) : len(w) - len(trail)]
+        # a designator in brackets, (ADEOS-II), stays as it is
+        out.append(w if lead or trail else "-".join(piece(x) for x in core.split("-")))
+    return " ".join(out)
 
 
 def brightness_words(mag: float) -> str:
