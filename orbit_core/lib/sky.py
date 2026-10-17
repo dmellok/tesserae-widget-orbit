@@ -168,7 +168,7 @@ KNOWN: dict[int, dict[str, Any]] = {
         "cls": "satellite",
         "mag": 3.6,
         "what": "the Aura atmospheric satellite: a long bus with one solar panel wing",
-        "ref": "",
+        "ref": "File:Aura spacecraft model.png",
     },
     28931: {
         "name": "Daichi (ALOS)",
@@ -362,8 +362,8 @@ STAGES: dict[str, dict[str, Any]] = {
         "ref": "",
     },
     "SL-14": {
-        "what": "the third stage of a Tsyklon-3 rocket: a short squat cylinder with a small engine, tumbling",
-        "ref": "",
+        "what": "the S5M third stage of a Tsyklon-3 rocket: a short squat cylinder with a small engine and a flared skirt, tumbling",
+        "ref": "File:Tsyklon-3 S5M upper stage.jpg",
     },
     "SL-8": {
         "what": "the second stage of a Kosmos-3M rocket: a slim cylinder with a single engine bell, tumbling slowly",
@@ -439,7 +439,7 @@ STAGES: dict[str, dict[str, Any]] = {
     },
     "THOR AGENA D": {
         "what": "an Agena D upper stage: a slim cylinder with a single engine bell",
-        "ref": "File:Agena B Upper Stage Rocket (10438682895).jpg",
+        "ref": "File:Lockheed RM-81 Agena-B – NASM Udvar Hazy (51281028437).jpg",
     },
     "GSLV": {
         "what": "the cryogenic third stage of an Indian GSLV rocket: a cylinder with a single engine bell",
@@ -464,6 +464,9 @@ CLASS_MAG = {
 }
 
 
+BARE_STAGE = " It is a bare, spent stage in orbit: dull grey-white paint scorched at the engine end, no fins, no flame, no lettering, no payload, nothing attached."
+
+
 def classify(norad: int, name: str) -> tuple[str, str, str, float]:
     """(shown name, class, what the painter is told, standard magnitude)."""
     k = KNOWN.get(norad)
@@ -479,8 +482,11 @@ def classify(norad: int, name: str) -> tuple[str, str, str, float]:
         return (
             f"{who} rocket body",
             "rocket",
-            stage.get("what")
-            or f"{CLASS_WHAT['rocket']}, the upper stage of a {who} launch",
+            (
+                stage.get("what")
+                or f"{CLASS_WHAT['rocket']}, the upper stage of a {who} launch"
+            )
+            + BARE_STAGE,
             CLASS_MAG["rocket"],
         )
     if "COSMOS" in up or "KOSMOS" in up:
@@ -575,6 +581,31 @@ def brightness_words(mag: float) -> str:
 # ----------------------------------------------------------------------
 # Element sets
 # ----------------------------------------------------------------------
+# What rides docked to a station and would be counted twice: modules, cargo and crew craft
+DOCKED = (
+    "POISK",
+    "NAUKA",
+    "PROGRESS",
+    "SOYUZ-MS",
+    "CREW DRAGON",
+    "DRAGON CRS",
+    "CYGNUS",
+    "CSS (WENTIAN)",
+    "CSS (MENGTIAN)",
+    "TIANZHOU",
+    "SHENZHOU",
+    "SZ-",
+    "HTV",
+    "STARLINER",
+    "DREAM CHASER",
+)
+
+
+def docked(name: str) -> bool:
+    up = (name or "").upper()
+    return any(d in up for d in DOCKED)
+
+
 def elements(
     which: str, data_dir: Path, ua: str
 ) -> tuple[list[Any], str | None, float]:
@@ -613,6 +644,7 @@ def elements(
                 el.norad in seen
                 or " DEB" in el.name.upper()
                 or el.name.upper().endswith(" DEB")
+                or docked(el.name)
             ):
                 continue
             seen.add(el.norad)

@@ -387,6 +387,10 @@ def fetch(
             )
             if got_pic.ready:
                 pic = P.picture(art, key, px, panel, whole_)
+                if pic:
+                    pic["impression"] = not bool(
+                        ref.get("src")
+                    )  # painted from a description, not a picture
                 if pic and pic.get("credit"):
                     credits.append(pic["credit"])
             elif got_pic.state == "failed":

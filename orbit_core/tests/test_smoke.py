@@ -185,6 +185,7 @@ def test_elements_skip_debris_and_duplicates(tmp_path, offline):
     els, err, at = SKY.elements("bright", tmp_path, SKY.user_agent(""))
     assert err is None and at > 0
     assert sorted(e.norad for e in els) == [22220, 25544, 99999], "the station once, the rocket body, the deep one (refused later), no debris"
+    assert SKY.docked("PROGRESS-MS 34") and SKY.docked("CSS (WENTIAN)") and not SKY.docked("CSS (TIANHE)") and not SKY.docked("ISS (ZARYA)")
     assert (tmp_path / "elements" / "visual.json").exists() and (tmp_path / "elements" / "stations.json").exists()
 
 
@@ -249,6 +250,7 @@ def test_paintings_from_a_reference_and_from_words(tmp_path, offline):
             assert not pr.get("image_urls") and "Zenit" in pr["prompt"]
     r = _ready(tonight, opts, tmp_path)
     assert all(p["pic"] and p["pic"]["kind"] == "painting" and not p["pic"]["whole"] for p in r["passes"])
+    assert all(p["pic"]["impression"] == (p["norad"] != 25544) for p in r["passes"]), "the station from a picture, the stage an impression"
     assert len(prompts) == len(names), "painted once"
     keys = [p.stem for p in P.gen_dir(tmp_path).glob("*.jpg")]
     assert any(k.startswith("sat_25544--linocut--p2") or k.startswith("sat_22220--linocut--p2") for k in keys)

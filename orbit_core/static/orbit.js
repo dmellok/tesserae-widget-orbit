@@ -46,6 +46,12 @@ function message(d, title, body, hint) {
   return `${head(d)}<div class="msg"><div class="msg-t">${esc(title)}</div><div class="msg-b">${esc(body)}</div>${hint ? `<div class="msg-h">${esc(hint)}</div>` : ''}</div>${foot(d)}`;
 }
 
+const IMPRESSION = 'an impression from its description, not from a picture';
+
+function impression(p, cls = 'ob-imp') {
+  return p.pic && p.pic.src && p.pic.impression ? `<span class="${cls}" title="${IMPRESSION}">impression</span>` : '';
+}
+
 function picture(p, cls = '') {
   if (p.pic && p.pic.src) return `<img class="ob-pic ${cls}${p.pic.whole ? ' whole' : ' cut'}" src="${p.pic.src}" alt="${esc(p.shown_name)}" decoding="sync">`;
   return `<span class="ob-pic ob-nopic ${cls}">${sil(p.cls)}</span>`;
@@ -88,7 +94,7 @@ function passPage(d) {
   ];
   const now = p.in_progress ? `<span class="ob-now">passing over now</span>` : '';
   return `${head(d)}<div class="pa${portrait ? ' portrait' : ''}">
-    <div class="pa-plate"><div class="pa-frame"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>${picture(p, 'pa-pic')}<div class="pa-fig">Fig. 1. ${esc(p.shown_name)}${p.pic && p.pic.credit ? `, ${esc(p.pic.credit)}` : ''}</div></div>
+    <div class="pa-plate"><div class="pa-frame"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>${picture(p, 'pa-pic')}${impression(p, 'ob-imp pa-imp')}<div class="pa-fig">Fig. 1. ${esc(p.shown_name)}${p.pic && p.pic.impression ? ', an impression' : ''}${p.pic && p.pic.credit ? `, ${esc(p.pic.credit)}` : ''}</div></div>
     <div class="pa-note"><div class="pa-name">${esc(p.shown_name)}${now}</div><div class="pa-sub">${esc(p.day)} · ${esc(p.start_local)} · ${esc(p.peak_el)}° in the ${esc(p.peak_dir)}</div>
       ${d.chart !== 'none' ? `<div class="pa-dome">${dome(p, 100)}</div>` : ''}
       <dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl></div>
@@ -100,7 +106,7 @@ function tonightPage(d) {
   const n = d.passes.length;
   const cols = n <= 2 ? 1 : n <= 6 ? 2 : 3;
   return `${head(d)}<div class="tn-grid" style="--cols:${cols}">${d.passes.map((p) => `<article class="tn-row${p.in_progress ? ' now' : ''}">
-      <div class="tn-pic">${picture(p)}</div>
+      <div class="tn-pic">${picture(p)}${impression(p, 'ob-imp tn-imp')}</div>
       <div class="tn-t"><b>${esc(p.shown_name)}</b><span class="tn-when">${esc(p.day)} · ${esc(p.start_local)} to ${esc(p.end_local)}</span><span class="tn-l">${esc(p.peak_el)}° in the ${esc(p.peak_dir)}, ${esc(p.rise_dir)} to ${esc(p.set_dir)}</span><span class="tn-l tn-b">${esc(p.bright)}</span></div>
       ${d.chart !== 'none' ? `<div class="tn-dome">${dome(p, 100)}</div>` : ''}
     </article>`).join('')}</div>${head(d, 'bottom')}${foot(d)}`;
@@ -124,7 +130,7 @@ async function packTonight(d) {
     specimens.push({
       name: String(p.norad), sci: p.shown_name, src, cut: whole ? null : src, on_paper: false, classic: false, whole, neutral: false, no_flip: true,
       factor: Math.pow((SIZE_M[p.cls] || 8) / 30, 0.35), aspect: pic.aspect > 0 ? pic.aspect : 2, paper: null,
-      lines: [p.shown_name, `${p.day} · ${p.start_local}`, `${p.peak_el}° in the ${p.peak_dir}`, p.bright],
+      lines: [p.shown_name, `${p.day} · ${p.start_local}`, `${p.peak_el}° in the ${p.peak_dir}`, p.bright, ...(pic.impression ? ['an impression'] : [])],
     });
   }
   const label = Math.max(0.017, 13 / h) * ((Number(d.text_size) || 100) / 100);
@@ -150,7 +156,7 @@ function scenePage(d) {
   const p = d.passes[0];
   const art = p.pic && p.pic.src ? `<div class="sc-bg" style="background-image:url('${p.pic.src}');background-size:${p.pic.whole ? 'cover' : 'contain'}"></div>` : `<div class="sc-bg sc-none">${sil(p.cls)}</div>`;
   const top = d.header === 'hidden' ? '' : `<div class="sc-top"><span>${esc(d.title)}</span><span>${esc(d.time)} · ${esc(d.date)}</span></div>`;
-  return `${art}${top}${d.chart !== 'none' ? `<div class="sc-dome">${dome(p, 100)}</div>` : ''}<div class="sc-main"><div class="sc-name">${esc(p.shown_name)}</div><div class="sc-when">${esc(p.day)} · ${esc(p.start_local)} to ${esc(p.end_local)} · ${esc(p.peak_el)}° in the ${esc(p.peak_dir)}</div><div class="sc-r">${esc(p.about)}</div></div>${foot(d).replace('class="credit"', 'class="credit sc-credit"')}`;
+  return `${art}${top}${d.chart !== 'none' ? `<div class="sc-dome">${dome(p, 100)}</div>` : ''}<div class="sc-main"><div class="sc-name">${esc(p.shown_name)}</div><div class="sc-when">${esc(p.day)} · ${esc(p.start_local)} to ${esc(p.end_local)} · ${esc(p.peak_el)}° in the ${esc(p.peak_dir)}${p.pic && p.pic.impression ? ' · an impression, not from a picture' : ''}</div><div class="sc-r">${esc(p.about)}</div></div>${foot(d).replace('class="credit"', 'class="credit sc-credit"')}`;
 }
 
 export async function render(shadow, ctx, widget) {
@@ -199,6 +205,9 @@ export async function render(shadow, ctx, widget) {
       .msg { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 1.4cqmin; padding: 4cqmin 6cqmin; text-align: center; }
       .msg-t { font-family: var(--sc); font-size: 5cqmin; letter-spacing: .06em; } .msg-b { font-size: 3.4cqmin; } .msg-h { font-size: 2.6cqmin; font-style: italic; opacity: .75; }
       .ob-nopic { position: relative; display: block; overflow: hidden; }
+      /* the mark on a painting made from words alone */
+      .ob-imp { font-family: var(--sans); font-size: calc(var(--ts) * 1.9cqmin); letter-spacing: .14em; text-transform: uppercase; border: 1px solid var(--ink); padding: .25em .7em; opacity: .75; }
+      .pa-imp { position: absolute; left: 2.6cqmin; top: 2.6cqmin; } .tn-imp { position: absolute; left: 0; bottom: 0; font-size: calc(var(--ts) * 1.5cqmin); padding: .15em .5em; } .tn-pic { position: relative; }
       .ob-sil { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .3; }
       /* the dome */
       .ob-dome { width: 100%; height: 100%; display: block; overflow: visible; }
