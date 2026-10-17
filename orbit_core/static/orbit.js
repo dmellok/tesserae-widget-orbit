@@ -106,8 +106,8 @@ function tonightPage(d) {
   const n = d.passes.length;
   const cols = n <= 2 ? 1 : n <= 6 ? 2 : 3;
   return `${head(d)}<div class="tn-grid" style="--cols:${cols}">${d.passes.map((p) => `<article class="tn-row${p.in_progress ? ' now' : ''}">
-      <div class="tn-pic">${picture(p)}${impression(p, 'ob-imp tn-imp')}</div>
-      <div class="tn-t"><b>${esc(p.shown_name)}</b><span class="tn-when">${esc(p.day)} · ${esc(p.start_local)} to ${esc(p.end_local)}</span><span class="tn-l">${esc(p.peak_el)}° in the ${esc(p.peak_dir)}, ${esc(p.rise_dir)} to ${esc(p.set_dir)}</span><span class="tn-l tn-b">${esc(p.bright)}</span></div>
+      <div class="tn-pic">${picture(p)}</div>
+      <div class="tn-t"><b>${esc(p.shown_name)}${impression(p, 'ob-imp tn-imp')}</b><span class="tn-when">${esc(p.day)} · ${esc(p.start_local)} to ${esc(p.end_local)}</span><span class="tn-l">${esc(p.peak_el)}° in the ${esc(p.peak_dir)}, ${esc(p.rise_dir)} to ${esc(p.set_dir)}</span><span class="tn-l tn-b">${esc(p.bright)}</span></div>
       ${d.chart !== 'none' ? `<div class="tn-dome">${dome(p, 100)}</div>` : ''}
     </article>`).join('')}</div>${head(d, 'bottom')}${foot(d)}`;
 }
@@ -130,7 +130,7 @@ async function packTonight(d) {
     specimens.push({
       name: String(p.norad), sci: p.shown_name, src, cut: whole ? null : src, on_paper: false, classic: false, whole, neutral: false, no_flip: true,
       factor: Math.pow((SIZE_M[p.cls] || 8) / 30, 0.35), aspect: pic.aspect > 0 ? pic.aspect : 2, paper: null,
-      lines: [p.shown_name, `${p.day} · ${p.start_local}`, `${p.peak_el}° in the ${p.peak_dir}`, p.bright, ...(pic.impression ? ['an impression'] : [])],
+      lines: [p.shown_name + (pic.impression ? ' (impression)' : ''), `${p.day} · ${p.start_local}`, `${p.peak_el}° in the ${p.peak_dir}`, p.bright],
     });
   }
   const label = Math.max(0.017, 13 / h) * ((Number(d.text_size) || 100) / 100);
@@ -207,7 +207,7 @@ export async function render(shadow, ctx, widget) {
       .ob-nopic { position: relative; display: block; overflow: hidden; }
       /* the mark on a painting made from words alone */
       .ob-imp { font-family: var(--sans); font-size: calc(var(--ts) * 1.9cqmin); letter-spacing: .14em; text-transform: uppercase; border: 1px solid var(--ink); padding: .25em .7em; opacity: .75; }
-      .pa-imp { position: absolute; left: 2.6cqmin; top: 2.6cqmin; } .tn-imp { position: absolute; left: 0; bottom: 0; font-size: calc(var(--ts) * 1.5cqmin); padding: .15em .5em; } .tn-pic { position: relative; }
+      .pa-imp { position: absolute; left: 2.6cqmin; top: 2.6cqmin; } .tn-imp { margin-left: .6em; font-size: calc(var(--ts) * 1.5cqmin); padding: .15em .5em; vertical-align: middle; letter-spacing: .1em; }
       .ob-sil { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .3; }
       /* the dome */
       .ob-dome { width: 100%; height: 100%; display: block; overflow: visible; }
