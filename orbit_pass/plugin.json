@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "Orbit: Pass",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "kind": "widget",
   "tesserae_min": "0.463.0",
   "description": "The best pass over your place to-night: the station or the brightest satellite coming, painted in a ruled frame, with a sky chart of its path, the rise and set times and directions, how high and how bright. Passes worked out on your server from CelesTrak's element sets, no key.",
