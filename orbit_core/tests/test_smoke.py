@@ -9,6 +9,7 @@ import io
 import json
 import math
 import os
+import subprocess
 import sys
 import time
 from datetime import datetime, timedelta, timezone
@@ -127,7 +128,7 @@ def _ready(widget, opts, tmp_path, settings=SETTINGS, timeout=30.0):
 def test_manifests_and_client_files():
     for wid in ("orbit_core", "orbit_pass", "orbit_tonight", "orbit_scene"):
         m = json.loads((ROOT / wid / "plugin.json").read_text(encoding="utf-8"))
-        assert m["version"] == "0.1.2" and m["tesserae_min"] == "0.463.0"
+        assert m["version"] == "0.2.0" and m["tesserae_min"] == "0.463.0"
         if m["kind"] == "widget":
             assert m["render"]["warm_ahead_s"] == 150 and (ROOT / wid / "client.js").exists()
             names = [o["name"] for o in m["cell_options"]]
@@ -278,3 +279,47 @@ def test_the_hosts_commons_lookup_is_used_when_there(tmp_path, monkeypatch):
     r = SKY.ref_src("File:HST-SM4.jpeg", tmp_path, "ua")
     assert r == {"src": "https://upload.wikimedia.org/1200.jpg", "link": "https://commons.wikimedia.org/wiki/x", "by": "NASA", "lic": "Public domain"}
     assert not (tmp_path / "refs").exists(), "nothing kept by the widget; the host keeps it"
+
+
+def test_fugleramme_packings_keep_objects_apart_and_on_the_page():
+    script = (
+        f"import('file://{ROOT}/orbit_core/static/pack.js').then((m) => {{"
+        " const blob = (w, h, s) => { const d = new Uint8Array(w * h);"
+        "   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {"
+        "     const dx = (x - w * 0.45) / (w * 0.35), dy = (y - h * 0.45) / (h * 0.3);"
+        "     const head = ((x - w * 0.75) / (w * 0.13)) ** 2 + ((y - h * 0.25) / (h * 0.13)) ** 2 < 1;"
+        "     if (dx * dx + dy * dy < 1 || head || (Math.abs(x - w * 0.45) < 2 && y > h * 0.7)) d[y * w + x] = 1; }"
+        "   return { w, h, data: d }; };"
+        " for (const packer of ['spiral', 'voids']) for (const [W, H] of [[1400, 840], [840, 1400]]) {"
+        "   const its = Array.from({ length: 14 }, (_, i) => ({ mask: blob(160 + (i * 37) % 140, 130 + (i * 53) % 110, i),"
+        "     factor: 0.6 + (i % 5) / 5, lines: ['Object ' + i], flippable: false, sci: 'Sat ' + i }));"
+        "   const out = m.packSheet(its, W, H, 13 / H, { packer });"
+        "   const occ = new Uint8Array(W * H);"
+        "   out.forEach((p, i) => { if (!p) throw new Error(packer + ' left one off');"
+        "     const k = its[i].mask;"
+        "     for (let y = 0; y < k.h; y++) for (let x = 0; x < k.w; x++) { if (!k.data[y * k.w + x]) continue;"
+        "       if (p.flip) throw new Error(packer + ' mirrored one');"
+        "       const sx = x;"
+        "       const X = Math.floor(p.x + (sx + 0.5) * p.w / k.w), Y = Math.floor(p.y + (y + 0.5) * p.h / k.h);"
+        "       if (X < 0 || Y < 0 || X >= W || Y >= H) throw new Error(packer + ' off the page');"
+        "       if (occ[Y * W + X] && occ[Y * W + X] !== i + 1) throw new Error(packer + ' overlap');"
+        "       occ[Y * W + X] = i + 1; } });"
+        "   const same = m.packSheet(its, W, H, 13 / H, { packer });"
+        "   if (JSON.stringify(same) !== JSON.stringify(out)) throw new Error(packer + ' not repeatable'); }"
+        " console.log('ok'); })"
+    )
+    out = subprocess.run(
+        ["node", "--input-type=module", "-e", script],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert out.returncode == 0, out.stderr
+
+
+def test_packing_option_reaches_the_page(tmp_path):
+    assert tonight.fetch({}, SETTINGS, ctx=_ctx(tmp_path))["packing"] == "balanced"
+    assert tonight.fetch({"packing": "voids"}, SETTINGS, ctx=_ctx(tmp_path))["packing"] == "voids"
+    assert tonight.fetch({"packing": "nonsense"}, SETTINGS, ctx=_ctx(tmp_path))["packing"] == "balanced"
+    # a look, not a subject: switching it repacks the same passes and paintings
+    assert S.subject_id({**MELBOURNE, "packing": "spiral"}) == S.subject_id(MELBOURNE)

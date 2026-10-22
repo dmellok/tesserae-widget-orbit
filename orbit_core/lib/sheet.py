@@ -42,6 +42,7 @@ PICTURES = ("silhouettes", "paintings")
 PANELS = ("colour", "gray16", "gray4", "mono")
 PAPERS = ("cream", "white", "aged", "blueprint", "night")
 FONTS = ("fell", "archivo", "georgia", "page")
+PACKINGS = ("balanced", "spiral", "voids")
 MAX_COUNT = 10
 PICTURE_PX = 600
 HERO_PX = 1400
@@ -50,6 +51,7 @@ LOOK_OPTIONS = frozenset(
     (
         "layout",
         "scale",
+        "packing",
         "font",
         "pictures",
         "style",
@@ -287,6 +289,7 @@ def fetch(
         "font": _choice(options.get("font"), FONTS),
         "layout": _choice(options.get("layout"), ("rows", "cluster"), "rows"),
         "scale": _int(options.get("scale"), 100, 40, 100),
+        "packing": _choice(options.get("packing"), PACKINGS),
         "min_el": int(min_el),
     }
     if not place:

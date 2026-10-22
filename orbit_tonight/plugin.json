@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "Orbit: To-night",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "kind": "widget",
   "tesserae_min": "0.463.0",
   "description": "Every visible pass over your place in the next day, in order: the station and the bright satellites, each with its small painting and a sky chart of its path, the times, the directions and how bright. Worked out on your server from CelesTrak's element sets, no key.",
@@ -631,6 +631,30 @@
       "show_if": {
         "layout": "cluster"
       }
+    },
+    {
+      "name": "packing",
+      "type": "select",
+      "label": "Packing",
+      "default": "balanced",
+      "choices": [
+        {
+          "value": "balanced",
+          "label": "Balanced: grown to fill the page"
+        },
+        {
+          "value": "spiral",
+          "label": "Spiral: out from the middle (Fugleramme)"
+        },
+        {
+          "value": "voids",
+          "label": "Voids: the emptiest paper first (Fugleramme)"
+        }
+      ],
+      "show_if": {
+        "layout": "cluster"
+      },
+      "help": "How the cluster is packed. Balanced packs from the middle and then grows each object into the room left. Spiral and Voids are Fugleramme's packers: Spiral sets each object, largest first, on the first free spot out from the middle, for a round cluster; Voids sets each on the emptiest paper it fits, so the page fills to the corners."
     },
     {
       "name": "chart",

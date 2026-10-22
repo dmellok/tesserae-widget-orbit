@@ -136,16 +136,20 @@ async function packTonight(d) {
   const label = Math.max(0.017, 13 / h) * ((Number(d.text_size) || 100) / 100);
   const zoom = Math.max(0.4, Math.min(1, (Number(d.scale) || 100) / 100));
   const dark = d.paper === 'night' || d.paper === 'blueprint';
+  const packer = ['spiral', 'voids'].includes(d.packing) ? d.packing : 'balanced';
   try {
-    return await buildSheet({ specimens, ratio: w / h, size: 1400, label, paper: d.paper === 'white' ? 'white' : d.paper === 'aged' ? 'aged' : dark ? 'white' : 'cream', ink: INK[d.paper] || INK.cream, layout: 'cluster', facing: 'inward', zoom, transparent: dark });
+    return await buildSheet({ specimens, ratio: w / h, size: 1400, label, paper: d.paper === 'white' ? 'white' : d.paper === 'aged' ? 'aged' : dark ? 'white' : 'cream', ink: INK[d.paper] || INK.cream, layout: 'cluster', packer, facing: 'inward', zoom, transparent: dark });
   } catch (e) { console.warn('orbit: packing failed', e); return null; }
 }
+
+/* A caption line as the packer wrapped it: its breaks kept, so the line is as wide as was measured. */
+const br = (t) => esc(t).replace(/\n/g, '<br>');
 
 function packedPage(d, made) {
   const tags = made.items.map((m) => {
     const ls = m.lines || [];
     if (!ls.length) return '';
-    return `<span class="sh-l" style="left:${(m.at[0] * 100).toFixed(2)}%;top:${(m.at[1] * 100).toFixed(2)}%"><span class="sh-ln sh-name">${esc(ls[0])}</span>${ls.slice(1).map((t) => `<span class="sh-ln sh-sm">${esc(t)}</span>`).join('')}</span>`;
+    return `<span class="sh-l" style="left:${(m.at[0] * 100).toFixed(2)}%;top:${(m.at[1] * 100).toFixed(2)}%"><span class="sh-ln sh-name">${br(ls[0])}</span>${ls.slice(1).map((t) => `<span class="sh-ln sh-sm">${br(t)}</span>`).join('')}</span>`;
   }).join('');
   const page = `<div class="sh-page" style="--r:${made.ratio};--lf:${made.label}"><img src="${made.src}" alt="" decoding="sync">${tags}</div>`;
   return `${head(d)}<div class="sh">${page}</div>${head(d, 'bottom')}${foot(d)}`;

@@ -2,7 +2,7 @@
   "tesserae_compat": "1.x",
   "tesserae_min": "0.463.0",
   "name": "Orbit Core",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "kind": "data",
   "description": "The settings and the paintings page for the Orbit widgets (orbit_pass, orbit_tonight, orbit_scene): the fal.ai key, the daily painting budget and a contact for CelesTrak and Wikimedia Commons. No widget of its own.",
   "icon": "ph-planet",

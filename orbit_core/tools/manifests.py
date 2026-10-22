@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-VERSION = "0.1.2"
+VERSION = "0.2.0"
 TESSERAE_MIN = "0.463.0"
 
 _spec = _ilu.spec_from_file_location("_tesserae_plugins.orbit_core.paint", ROOT / "orbit_core" / "lib" / "paint.py")
@@ -88,6 +88,7 @@ WIDGETS = {
         "options": lambda: where_options() + [{"name": "count", "type": "number", "label": "How many", "default": 6, "help": "1 to 10."}] + picture_options(False) + [
             sel("layout", "Layout", "rows", [("rows", "Rows: each pass with its picture and sky chart"), ("cluster", "Cluster: the objects packed on the page, sized as they are, captioned")], help="The cluster packs each object's painting or silhouette as large as the page allows, the station a hundred metres across and a rocket stage ten, with its next pass captioned beneath."),
             {"name": "scale", "type": "slider", "label": "Scale", "default": 100, "min": 40, "max": 100, "step": 5, "unit": "%", "help": "How far the cluster runs out to the margins.", "show_if": {"layout": "cluster"}},
+            sel("packing", "Packing", "balanced", [("balanced", "Balanced: grown to fill the page"), ("spiral", "Spiral: out from the middle (Fugleramme)"), ("voids", "Voids: the emptiest paper first (Fugleramme)")], show_if={"layout": "cluster"}, help="How the cluster is packed. Balanced packs from the middle and then grows each object into the room left. Spiral and Voids are Fugleramme's packers: Spiral sets each object, largest first, on the first free spot out from the middle, for a round cluster; Voids sets each on the emptiest paper it fits, so the page fills to the corners."),
         ] + page_options(),
     },
     "orbit_scene": {
