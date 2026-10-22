@@ -128,7 +128,7 @@ def _ready(widget, opts, tmp_path, settings=SETTINGS, timeout=30.0):
 def test_manifests_and_client_files():
     for wid in ("orbit_core", "orbit_pass", "orbit_tonight", "orbit_scene"):
         m = json.loads((ROOT / wid / "plugin.json").read_text(encoding="utf-8"))
-        assert m["version"] == "0.2.0" and m["tesserae_min"] == "0.463.0"
+        assert m["version"] == "0.2.1" and m["tesserae_min"] == "0.463.0"
         if m["kind"] == "widget":
             assert m["render"]["warm_ahead_s"] == 150 and (ROOT / wid / "client.js").exists()
             names = [o["name"] for o in m["cell_options"]]
@@ -323,3 +323,241 @@ def test_packing_option_reaches_the_page(tmp_path):
     assert tonight.fetch({"packing": "nonsense"}, SETTINGS, ctx=_ctx(tmp_path))["packing"] == "balanced"
     # a look, not a subject: switching it repacks the same passes and paintings
     assert S.subject_id({**MELBOURNE, "packing": "spiral"}) == S.subject_id(MELBOURNE)
+
+
+# ----------------------------------------------------------------------
+# The pages in a real browser: the shared page script served to Chromium from this folder.
+
+HARNESS = """<!doctype html><html><body style="margin:0"><div id="host"></div><script type="module">
+window.run = async (job) => {
+  const host = document.getElementById('host');
+  host.style.cssText = `width:${job.w}px;height:${job.h}px`;
+  const shadow = host.shadowRoot || host.attachShadow({ mode: 'open' });
+  if (job.kind === 'rows') {
+    const m = await import('/orbit.js');
+    await m.render(shadow, { data: job.data, cell: { w: job.w, h: job.h, size: 'lg' } }, 'tonight');
+    const box = (el) => { const r = el.getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom]; };
+    return [...shadow.querySelectorAll('.tn-row')].map((row) => {
+      const cell = row.querySelector('.tn-dome'), svg = row.querySelector('.tn-dome svg'), b = row.querySelector('.tn-t b'), t = row.querySelector('.tn-t');
+      return { row: box(row), cell: cell && box(cell), svg: svg && box(svg), text: box(t), nameCut: b.scrollHeight > b.clientHeight + 1 };
+    });
+  }
+  const m = await import('/sheet.js');
+  const made = await m.buildSheet(job.sheet);
+  const img = new Image(); img.src = made.src; await img.decode();
+  const c = document.createElement('canvas'); c.width = made.w; c.height = made.h;
+  const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0);
+  const at = (fx, fy) => [...ctx.getImageData(Math.round(fx * made.w), Math.round(fy * made.h), 1, 1).data].slice(0, 3);
+  return made.items.map((it) => { const [x, y, w, h] = it.box; return { corner: at(x + w * 0.04, y + h * 0.04), middle: at(x + w / 2, y + h / 2) }; });
+};
+window.ready = true;
+</script></body></html>"""
+
+
+@pytest.fixture(scope="module")
+def browser_page():
+    pw = pytest.importorskip("playwright.sync_api")
+    from app.renderer import _chromium_launch_kwargs
+
+    static = ROOT / "orbit_core" / "static"
+
+    def serve(route):
+        path = route.request.url.split("orbit.test/", 1)[1].split("?")[0]
+        if path == "h.html":
+            return route.fulfill(body=HARNESS, content_type="text/html")
+        f = static / path
+        if not f.is_file():
+            return route.fulfill(status=404, body="")
+        return route.fulfill(
+            body=f.read_bytes(),
+            content_type="text/javascript" if f.suffix == ".js" else "image/svg+xml",
+        )
+
+    with pw.sync_playwright() as p:
+        try:
+            browser = p.chromium.launch(**_chromium_launch_kwargs())
+        except Exception as exc:  # noqa: BLE001
+            pytest.skip(f"no Chromium here: {exc}")
+        page = browser.new_page()
+        page.route("http://orbit.test/**", serve)
+        page.goto("http://orbit.test/h.html")
+        page.wait_for_function("window.ready === true")
+        yield page
+        browser.close()
+
+
+def _fake_passes(n):
+    names = [
+        "THOR AGENA D rocket body",
+        "International Space Station",
+        "Knacksat-2",
+        "Okean-3",
+        "DELTA 2 rocket body",
+        "SL-3 rocket body",
+        "HMU-SAT2",
+        "ERS-1",
+        "ISIS 1",
+    ]
+    track = [[0, 220, 0], [1, 180, 30], [2, 95, 0]]
+    return [
+        {
+            "norad": 100 + i,
+            "shown_name": names[i % len(names)],
+            "cls": "rocket",
+            "day": "to-night",
+            "start_local": "20:11",
+            "end_local": "20:24",
+            "peak_el": 32,
+            "peak_dir": "SSE",
+            "peak_az": 180,
+            "rise_dir": "SW",
+            "set_dir": "E",
+            "bright": "a moving star of middling brightness",
+            "track": track,
+            "pic": None,
+            "in_progress": False,
+        }
+        for i in range(n)
+    ]
+
+
+@pytest.mark.parametrize("w,h", [(1200, 800), (640, 400), (380, 240), (480, 800)])
+def test_rows_keep_each_sky_chart_inside_its_column(browser_page, w, h):
+    for n in (1, 2, 3, 4, 6, 9):
+        for chart in ("dome", "none"):
+            data = {
+                "widget": "orbit_tonight",
+                "state": "ok",
+                "title": "Over Melbourne",
+                "time": "09:00",
+                "date": "Fri 23 Oct",
+                "passes": _fake_passes(n),
+                "chart": chart,
+                "credits": ["x"],
+            }
+            rows = browser_page.evaluate(
+                "(j) => window.run(j)", {"kind": "rows", "w": w, "h": h, "data": data}
+            )
+            assert len(rows) == n
+            for r in rows:
+                rx0, ry0, rx1, ry1 = r["row"]
+                assert rx1 <= w + 0.5 and ry1 <= h + 0.5, (
+                    w,
+                    h,
+                    n,
+                    "the row stays on the page",
+                )
+                if chart == "none":
+                    assert r["cell"] is None
+                    assert r["text"][2] - r["text"][0] >= 0.4 * (rx1 - rx0), (
+                        w,
+                        h,
+                        n,
+                        "the words take the room the chart left",
+                    )
+                    continue
+                cx0, cy0, cx1, cy1 = r["cell"]
+                sx0, sy0, sx1, sy1 = r["svg"]
+                assert cx0 >= rx0 - 0.5 and cx1 <= rx1 + 0.5, (
+                    w,
+                    h,
+                    n,
+                    "the dome's column is inside the row",
+                )
+                assert (
+                    sx0 >= cx0 - 0.5
+                    and sx1 <= cx1 + 0.5
+                    and sy0 >= cy0 - 0.5
+                    and sy1 <= cy1 + 0.5
+                ), (w, h, n, r)
+                assert sx1 - sx0 > 0.3 * (cy1 - cy0) or sx1 - sx0 > 30, (
+                    w,
+                    h,
+                    n,
+                    "the dome is not shrunk to nothing",
+                )
+            if (w, h) == (1200, 800) and n <= 6:
+                assert not any(r["nameCut"] for r in rows), (
+                    n,
+                    chart,
+                    "the long name is shown whole",
+                )
+
+
+def _rgba_png(w=300, h=200) -> str:
+    import base64
+
+    from PIL import Image, ImageDraw
+
+    im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    ImageDraw.Draw(im).ellipse(
+        (40, 40, w - 40, h - 40), fill=(200, 60, 40, 255)
+    )  # its box corners stay clear
+    out = io.BytesIO()
+    im.save(out, "PNG")
+    return "data:image/png;base64," + base64.b64encode(out.getvalue()).decode()
+
+
+@pytest.mark.parametrize(
+    "paper,rgb",
+    [("night", (11, 16, 32)), ("blueprint", (29, 63, 115)), ("cream", (243, 234, 214))],
+)
+def test_cluster_cut_outs_sit_on_the_paper(browser_page, paper, rgb):
+    src = _rgba_png()
+    base = {
+        "name": "a",
+        "sci": "a",
+        "src": src,
+        "cut": src,
+        "on_paper": False,
+        "whole": False,
+        "neutral": False,
+        "no_flip": True,
+        "factor": 1,
+        "aspect": 1.5,
+        "paper": None,
+        "lines": ["A"],
+    }
+    specimens = [
+        {**base, "classic": False},
+        {**base, "name": "b", "classic": True},
+    ]  # one drawn over, one by multiply
+    sheet = {
+        "specimens": specimens,
+        "ratio": 1.5,
+        "size": 900,
+        "label": 0.02,
+        "paper": paper,
+        "ink": "#888",
+        "layout": "grid",
+    }
+    got = browser_page.evaluate(
+        "(j) => window.run(j)", {"kind": "sheet", "w": 10, "h": 10, "sheet": sheet}
+    )
+    assert len(got) == 2
+    for g in got:
+        assert all(abs(a - b) <= 10 for a, b in zip(g["corner"], rgb)), (
+            paper,
+            g,
+            "the paper round a cut-out is the page's own paper, not white",
+        )
+        r, gr, b = g["middle"]
+        assert r > 140 and r > 2.5 * gr and r > 2.5 * b, (
+            paper,
+            g,
+            "the cut-out shows in its own colours, not black or white",
+        )
+    assert all(abs(a - b) <= 14 for a, b in zip(got[0]["middle"], (200, 60, 40))), (
+        paper,
+        got[0],
+        "one with alpha is drawn as it is",
+    )
+
+
+def test_the_cluster_is_built_on_the_dark_paper():
+    js = (ROOT / "orbit_core" / "static" / "orbit.js").read_text(encoding="utf-8")
+    assert (
+        "transparent: dark" not in js
+        and "mix-blend-mode: screen; }\n      .sh-l" not in js
+    )
+    assert ".sh-page > img { mix-blend-mode" not in js

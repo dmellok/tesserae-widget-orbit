@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "Orbit: To-night",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "kind": "widget",
   "tesserae_min": "0.463.0",
   "description": "Every visible pass over your place in the next day, in order: the station and the bright satellites, each with its small painting and a sky chart of its path, the times, the directions and how bright. Worked out on your server from CelesTrak's element sets, no key.",

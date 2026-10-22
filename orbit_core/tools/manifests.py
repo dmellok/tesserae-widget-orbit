@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-VERSION = "0.2.0"
+VERSION = "0.2.1"
 TESSERAE_MIN = "0.463.0"
 
 _spec = _ilu.spec_from_file_location("_tesserae_plugins.orbit_core.paint", ROOT / "orbit_core" / "lib" / "paint.py")

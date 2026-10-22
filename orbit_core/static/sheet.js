@@ -6,7 +6,26 @@ import { IN_WORKER, canvas, cutout, faceOf, fromAlpha, inkOf, loadImage, maskCan
 import { packSheet } from './pack.js';
 export { captionPlan, wrapLabel } from './pack.js';
 
-const PAPERS = { cream: [243, 234, 214], white: [255, 255, 255], aged: [233, 220, 192] };
+const PAPERS = { cream: [243, 234, 214], white: [255, 255, 255], aged: [233, 220, 192], blueprint: [29, 63, 115], night: [11, 16, 32] };
+export const isDark = (paper) => { const c = PAPERS[paper] || PAPERS.cream; return 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2] < 128; };
+
+/* A cut-out made to print by multiply, its white taken out as transparency, so on a dark
+   paper it shows as it would on white: multiply over a dark page would print it black. */
+export function unmatte(cut) {
+  const w = cut.width, h = cut.height;
+  const out = canvas(w, h);
+  const ctx = out.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(cut, 0, 0);
+  const id = ctx.getImageData(0, 0, w, h), px = id.data;
+  for (let i = 0; i < px.length; i += 4) {
+    const a = 1 - Math.min(px[i], px[i + 1], px[i + 2]) / 255;
+    if (a <= 0) { px[i + 3] = 0; continue; }
+    for (let k = 0; k < 3; k++) px[i + k] = Math.max(0, Math.min(255, Math.round((px[i + k] - 255 * (1 - a)) / a)));
+    px[i + 3] = Math.round(px[i + 3] * a);
+  }
+  ctx.putImageData(id, 0, 0);
+  return out;
+}
 const sheetSize = (ratio, size) => (ratio >= 1 ? [size, Math.round(size / ratio)] : [Math.round(size * ratio), size]);
 
 function drawMount(ctx, x, y, w, h, ink, W) {
@@ -50,6 +69,7 @@ function gridSpots(items, W, H, label) {
 
 function draw(items, placed, W, H, paper, ink) {
   const bg = PAPERS[paper] || PAPERS.cream;
+  const dark = isDark(paper);
   const sheet = canvas(W, H);
   const ctx = sheet.getContext('2d');
   ctx.fillStyle = `rgb(${bg.join(',')})`;
@@ -62,8 +82,12 @@ function draw(items, placed, W, H, paper, ink) {
     if (b.blend === 'mount') drawMount(ctx, x, y, w, h, ink, W);
     else {
       ctx.save();
-      ctx.globalCompositeOperation = b.blend;
-      if (s.flip) { ctx.translate(x + w, y); ctx.scale(-1, 1); ctx.drawImage(b.cut, 0, 0, w, h); } else ctx.drawImage(b.cut, x, y, w, h);
+      // on a dark paper every cut-out goes on over the paper: one that prints by multiply has
+      // its white taken out first, and one with alpha already is drawn as it is
+      const multiply = b.blend === 'multiply';
+      ctx.globalCompositeOperation = dark ? 'source-over' : b.blend;
+      const pic = dark && multiply ? unmatte(b.cut) : b.cut;
+      if (s.flip) { ctx.translate(x + w, y); ctx.scale(-1, 1); ctx.drawImage(pic, 0, 0, w, h); } else ctx.drawImage(pic, x, y, w, h);
       ctx.restore();
     }
     slots[b.idx] = { x, y, w, h, on_paper: !!b.on_paper };
@@ -82,7 +106,7 @@ export function quickSheet({ specimens, ratio, size, label, paper = 'cream', ink
   const placed = spots(items, W, H, label, { layout, packer, facing, fast: true, zoom });
   const d = draw(items, placed, W, H, paper, ink);
   if (!d.shown.length) return null;
-  return { canvas: d.sheet, slots: d.slots, paper: d.paper, items: d.shown, ratio, label, w: W, h: H, quick: true };
+  return { canvas: d.sheet, slots: d.slots, paper: d.paper, paper_name: paper, items: d.shown, ratio, label, w: W, h: H, quick: true };
 }
 
 /* A cut-out drawn into its placeholder mount, the dashed oval painted over with paper first. */
@@ -97,8 +121,9 @@ export function drawIntoMount(quick, i, pic, blend) {
   ctx.save();
   ctx.fillStyle = quick.paper;
   ctx.fillRect(slot.x - 2, slot.y - 2, slot.w + 4, slot.h + 4);
-  ctx.globalCompositeOperation = blend === 'multiply' ? 'multiply' : 'source-over';
-  ctx.drawImage(pic, x, y, w, h);
+  const dark = quick.paper_name && isDark(quick.paper_name);
+  ctx.globalCompositeOperation = blend === 'multiply' && !dark ? 'multiply' : 'source-over';
+  ctx.drawImage(blend === 'multiply' && dark ? unmatte(pic) : pic, x, y, w, h);
   ctx.restore();
 }
 

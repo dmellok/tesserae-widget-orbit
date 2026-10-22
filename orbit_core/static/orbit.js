@@ -58,8 +58,9 @@ function picture(p, cls = '') {
 }
 
 /* The sky chart: the dome seen from above, north up, the zenith in the middle, the pass drawn
-   as an arc with its rise and set marked. Azimuth clockwise from the top, elevation inward. */
-function dome(p, size = 100) {
+   as an arc with its rise and set marked. Azimuth clockwise from the top, elevation inward.
+   ``pad`` widens the box either side so the rise and set times stay inside it. */
+function dome(p, size = 100, pad = 0) {
   const R = size / 2 - 7;
   const cx = size / 2, cy = size / 2;
   const pt = (az, el) => { const r = R * (90 - el) / 90; const a = (az - 90) * Math.PI / 180; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; };
@@ -70,7 +71,7 @@ function dome(p, size = 100) {
   const [px, py] = pt(p.peak_az, p.peak_el);
   const rings = [30, 60].map((el) => `<circle cx="${cx}" cy="${cy}" r="${(R * (90 - el) / 90).toFixed(1)}" class="ob-ring"/>`).join('');
   const labels = [['N', 0], ['E', 90], ['S', 180], ['W', 270]].map(([t, az]) => { const [x, y] = pt(az, -9); return `<text x="${x.toFixed(1)}" y="${(y + 2.2).toFixed(1)}" class="ob-cp">${t}</text>`; }).join('');
-  return `<svg class="ob-dome" viewBox="0 0 ${size} ${size}" aria-label="The pass across the sky">
+  return `<svg class="ob-dome" viewBox="${-pad} 0 ${size + 2 * pad} ${size}" aria-label="The pass across the sky">
     <circle cx="${cx}" cy="${cy}" r="${R}" class="ob-horizon"/>${rings}
     <line x1="${cx}" y1="${cy - R}" x2="${cx}" y2="${cy + R}" class="ob-ring"/><line x1="${cx - R}" y1="${cy}" x2="${cx + R}" y2="${cy}" class="ob-ring"/>
     ${labels}
@@ -101,14 +102,47 @@ function passPage(d) {
   </div>${head(d, 'bottom')}${foot(d)}`;
 }
 
-/* To-night: every pass coming, in order, each with its small painting and dome. */
+/* To-night: every pass coming, in order, each with its small painting and dome. The columns
+   are chosen so each row comes out about three times as wide as it is tall, and each row's
+   painting and dome columns from the row's size; the dome fits its own cell either way. */
+const DOME_PAD = 15;
+const DOME_ASPECT = (100 + 2 * DOME_PAD) / 100;
+
+export function rowsPlan(n, W, H, chart = true, header = true, footer = true) {
+  const m = Math.min(W, H) / 100;
+  const gw = W - 4.8 * m, gh = H - 2 * m - (header ? 6.5 * m : 0) - (footer ? 3.6 * m : 0);
+  let best = null;
+  for (let cols = 1; cols <= Math.min(3, n); cols++) {
+    const rows = Math.ceil(n / cols);
+    const rw = (gw - (cols - 1) * 2 * m) / cols, rh = (gh - (rows - 1) * m) / rows - 0.8 * m;
+    const score = Math.abs(Math.log(rw / Math.max(1, rh) / 4.5));
+    if (!best || score < best.score - 1e-9) best = { cols, rows, rw, rh, score };
+  }
+  const { cols, rows, rw, rh } = best;
+  const gap = 1.5 * m;
+  // a row near square (one or two passes on the page) takes the painting across its top and
+  // the words and the dome under it; a wide row has the three side by side
+  const tall = rw / rh < 1.8;
+  const band = tall ? 0.42 * rh : rh;
+  let pic = tall ? 0 : Math.min(1.6 * rh, 0.28 * rw);
+  let dome = chart ? Math.min(0.94 * band * DOME_ASPECT, (tall ? 0.42 : 0.3) * rw) : 0;
+  const room = rw - 0.42 * rw - (chart ? 2 : 1) * gap;  // the words keep at least 42% of the row
+  if (pic + dome > room) { const k = Math.max(0, room) / (pic + dome); pic *= k; dome *= k; }
+  // the words grow on a roomy row, as far as both its height and the width left to them allow
+  const words = rw - pic - dome - (chart ? 2 : 1) * gap;
+  const scale = Math.max(1, Math.min(1.7, band / (14 * m), words / (40 * m)));
+  return { cols, rows, tall, pic: (100 * pic) / rw, dome: (100 * dome) / rw, scale };
+}
+
 function tonightPage(d) {
   const n = d.passes.length;
-  const cols = n <= 2 ? 1 : n <= 6 ? 2 : 3;
-  return `${head(d)}<div class="tn-grid" style="--cols:${cols}">${d.passes.map((p) => `<article class="tn-row${p.in_progress ? ' now' : ''}">
+  const chart = d.chart !== 'none';
+  const plan = rowsPlan(n, d.cell_w || 800, d.cell_h || 480, chart, d.header !== 'hidden', (d.footer || 'show') !== 'hide');
+  const tmpl = `${plan.tall ? '' : `${plan.pic.toFixed(2)}% `}minmax(0, 1fr)${chart ? ` ${plan.dome.toFixed(2)}%` : ''}`;
+  return `${head(d)}<div class="tn-grid${plan.tall ? ' tall' : ''}" style="--cols:${plan.cols};--rows:${plan.rows};--tn-cols:${tmpl};--rs:${plan.scale.toFixed(3)}">${d.passes.map((p) => `<article class="tn-row${p.in_progress ? ' now' : ''}">
       <div class="tn-pic">${picture(p)}</div>
-      <div class="tn-t"><b>${esc(p.shown_name)}${impression(p, 'ob-imp tn-imp')}</b><span class="tn-when">${esc(p.day)} · ${esc(p.start_local)} to ${esc(p.end_local)}</span><span class="tn-l">${esc(p.peak_el)}° in the ${esc(p.peak_dir)}, ${esc(p.rise_dir)} to ${esc(p.set_dir)}</span><span class="tn-l tn-b">${esc(p.bright)}</span></div>
-      ${d.chart !== 'none' ? `<div class="tn-dome">${dome(p, 100)}</div>` : ''}
+      <div class="tn-t"><b><span class="tn-name">${esc(p.shown_name)}</span>${impression(p, 'ob-imp tn-imp')}</b><span class="tn-when">${esc(p.day)} · ${esc(p.start_local)} to ${esc(p.end_local)}</span><span class="tn-l">${esc(p.peak_el)}° in the ${esc(p.peak_dir)}, ${esc(p.rise_dir)} to ${esc(p.set_dir)}</span><span class="tn-l tn-b">${esc(p.bright)}</span></div>
+      ${chart ? `<div class="tn-dome">${dome(p, 100, DOME_PAD)}</div>` : ''}
     </article>`).join('')}</div>${head(d, 'bottom')}${foot(d)}`;
 }
 
@@ -135,10 +169,9 @@ async function packTonight(d) {
   }
   const label = Math.max(0.017, 13 / h) * ((Number(d.text_size) || 100) / 100);
   const zoom = Math.max(0.4, Math.min(1, (Number(d.scale) || 100) / 100));
-  const dark = d.paper === 'night' || d.paper === 'blueprint';
   const packer = ['spiral', 'voids'].includes(d.packing) ? d.packing : 'balanced';
   try {
-    return await buildSheet({ specimens, ratio: w / h, size: 1400, label, paper: d.paper === 'white' ? 'white' : d.paper === 'aged' ? 'aged' : dark ? 'white' : 'cream', ink: INK[d.paper] || INK.cream, layout: 'cluster', packer, facing: 'inward', zoom, transparent: dark });
+    return await buildSheet({ specimens, ratio: w / h, size: 1400, label, paper: ['white', 'aged', 'night', 'blueprint'].includes(d.paper) ? d.paper : 'cream', ink: INK[d.paper] || INK.cream, layout: 'cluster', packer, facing: 'inward', zoom });
   } catch (e) { console.warn('orbit: packing failed', e); return null; }
 }
 
@@ -211,7 +244,7 @@ export async function render(shadow, ctx, widget) {
       .ob-nopic { position: relative; display: block; overflow: hidden; }
       /* the mark on a painting made from words alone */
       .ob-imp { font-family: var(--sans); font-size: calc(var(--ts) * 1.9cqmin); letter-spacing: .14em; text-transform: uppercase; border: 1px solid var(--ink); padding: .25em .7em; opacity: .75; }
-      .pa-imp { position: absolute; left: 2.6cqmin; top: 2.6cqmin; } .tn-imp { margin-left: .6em; font-size: calc(var(--ts) * 1.5cqmin); padding: .15em .5em; vertical-align: middle; letter-spacing: .1em; }
+      .pa-imp { position: absolute; left: 2.6cqmin; top: 2.6cqmin; } .tn-imp { margin-left: .6em; font-size: calc(var(--ts) * 1.5cqmin * var(--rs, 1)); padding: .15em .5em; vertical-align: middle; letter-spacing: .1em; }
       .ob-sil { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .3; }
       /* the dome */
       .ob-dome { width: 100%; height: 100%; display: block; overflow: visible; }
@@ -241,17 +274,20 @@ export async function render(shadow, ctx, widget) {
       .sh { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 0 .6cqmin; }
       .sh-page { position: relative; aspect-ratio: var(--r); max-width: 100%; max-height: 100%; width: min(100%, calc((100cqh - 9cqmin) * var(--r))); container-type: size; }
       .sh-page > img { display: block; width: 100%; height: 100%; }
-      .ob.dark .sh-page > img { mix-blend-mode: screen; }
       .sh-l { position: absolute; transform: translate(-50%, 12%); white-space: nowrap; text-align: center; line-height: 1.15; font-family: var(--sc); font-size: calc(var(--lf) * 100cqh); letter-spacing: .04em; color: var(--ink); --halo: var(--paper); text-shadow: .06em 0 0 var(--halo), -.06em 0 0 var(--halo), 0 .06em 0 var(--halo), 0 -.06em 0 var(--halo), .045em .045em 0 var(--halo), -.045em .045em 0 var(--halo), .045em -.045em 0 var(--halo), -.045em -.045em 0 var(--halo); }
       .sh-ln { display: block; } .sh-sm { font-family: var(--serif); font-style: italic; letter-spacing: 0; font-size: .88em; opacity: .85; }
       /* to-night */
-      .tn-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(var(--cols), 1fr); grid-auto-rows: 1fr; gap: 1cqmin 2cqmin; padding: 1cqmin 2.4cqmin; }
-      .tn-row { display: grid; grid-template-columns: 22% 1fr 22%; gap: 1.5cqmin; align-items: center; min-height: 0; border-bottom: 1px solid color-mix(in srgb, var(--ink) 25%, transparent); padding: .4cqmin 0; }
+      .tn-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); grid-template-rows: repeat(var(--rows), minmax(0, 1fr)); gap: 1cqmin 2cqmin; padding: 1cqmin 2.4cqmin; }
+      .tn-row { display: grid; grid-template-columns: var(--tn-cols); gap: 1.5cqmin; align-items: center; min-height: 0; min-width: 0; overflow: hidden; border-bottom: 1px solid color-mix(in srgb, var(--ink) 25%, transparent); padding: .4cqmin 0; }
+      .tn-grid.tall .tn-row { grid-template-rows: 56% minmax(0, 1fr); align-items: center; } .tn-grid.tall .tn-pic { grid-column: 1 / -1; padding: 1cqmin 0; box-sizing: border-box; }
       .tn-row.now { background: color-mix(in srgb, var(--ink) 7%, transparent); }
-      .tn-pic { height: 100%; min-height: 0; display: flex; align-items: center; justify-content: center; } .tn-pic .ob-pic { max-width: 100%; max-height: 100%; object-fit: contain; mix-blend-mode: multiply; } .ob.dark .tn-pic .ob-pic { mix-blend-mode: normal; } .ob-nopic.ob-pic { width: 70%; aspect-ratio: 1; }
-      .tn-t { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; } .tn-t b { font-family: var(--sc); font-size: calc(var(--ts) * 2.9cqmin); letter-spacing: .03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .tn-when { font-size: calc(var(--ts) * 2.4cqmin); } .tn-l { font-size: calc(var(--ts) * 2cqmin); opacity: .85; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .tn-b { font-style: normal; }
-      .tn-dome { aspect-ratio: 1; height: 90%; max-height: 100%; }
+      .tn-pic { height: 100%; min-height: 0; min-width: 0; display: flex; align-items: center; justify-content: center; } .tn-pic .ob-pic { max-width: 100%; max-height: 100%; object-fit: contain; mix-blend-mode: multiply; } .ob.dark .tn-pic .ob-pic { mix-blend-mode: normal; } .ob-nopic.ob-pic { width: 70%; aspect-ratio: 1; }
+      .tn-t { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+      .tn-t b { font-family: var(--sc); font-weight: 700; font-size: calc(var(--ts) * 2.9cqmin * var(--rs)); letter-spacing: .03em; line-height: 1.1; margin-bottom: .1em; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
+      .tn-imp { display: inline-block; white-space: nowrap; line-height: 1.2; }
+      .tn-when { font-size: calc(var(--ts) * 2.4cqmin * var(--rs)); } .tn-l { font-size: calc(var(--ts) * 2cqmin * var(--rs)); opacity: .85; font-style: italic; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; } .tn-b { font-style: normal; }
+      .tn-dome { container-type: size; height: 100%; min-width: 0; display: flex; align-items: center; justify-content: center; }
+      .tn-dome .ob-dome { width: min(100cqw, ${(100 * DOME_ASPECT).toFixed(1)}cqh); height: auto; aspect-ratio: ${DOME_ASPECT}; flex: 0 0 auto; overflow: hidden; }
       /* the scene */
       .sc-bg { position: absolute; inset: 0; background-position: center; background-repeat: no-repeat; } .sc-none .ob-sil { inset: 15cqmin; width: auto; height: auto; }
       .sc-top, .sc-main, .sc-credit, .sc-dome { position: absolute; font-family: var(--sans); }
