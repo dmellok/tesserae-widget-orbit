@@ -128,7 +128,7 @@ def _ready(widget, opts, tmp_path, settings=SETTINGS, timeout=30.0):
 def test_manifests_and_client_files():
     for wid in ("orbit_core", "orbit_pass", "orbit_tonight", "orbit_scene"):
         m = json.loads((ROOT / wid / "plugin.json").read_text(encoding="utf-8"))
-        assert m["version"] == "0.2.1" and m["tesserae_min"] == "0.463.0"
+        assert m["version"] == "0.2.2" and m["tesserae_min"] == "0.463.0"
         if m["kind"] == "widget":
             assert m["render"]["warm_ahead_s"] == 150 and (ROOT / wid / "client.js").exists()
             names = [o["name"] for o in m["cell_options"]]
@@ -136,6 +136,44 @@ def test_manifests_and_client_files():
     for cls in SKY.CLASSES:
         assert (ROOT / "orbit_core" / "static" / "sil" / f"{cls}.svg").exists(), cls
 
+
+
+RELEASED = "v0.2.1"  # the saved cells to keep working: no option, choice value or default may change
+UP_FRONT = {
+    "orbit_pass": ["location", "pictures", "paper"],
+    "orbit_tonight": ["location", "layout", "count", "pictures", "paper"],
+    "orbit_scene": ["location", "pictures", "paper"],
+}
+
+
+def test_options_panel_is_short_and_keeps_saved_cells():
+    for wid, up_front in UP_FRONT.items():
+        opts = json.loads((ROOT / wid / "plugin.json").read_text(encoding="utf-8"))["cell_options"]
+        by = {o["name"]: o for o in opts}
+        assert [o["name"] for o in opts if not o.get("show_if") and not o.get("advanced")] == up_front, wid
+        for o in opts:
+            for key, want in (o.get("show_if") or {}).items():
+                assert key in by, (wid, o["name"], key)
+                values = {c["value"] for c in by[key].get("choices", [])}
+                for w in want if isinstance(want, list) else [want.get("not") if isinstance(want, dict) else want]:
+                    assert not values or w in values or w == "", (wid, o["name"], key, w)
+            assert "Type" != o["label"] and "\u2014" not in o["label"] + o.get("help", ""), (wid, o["name"])
+        for name in ("view", "model", "which", "min_el", "hours", "chart", "title", "header", "footer", "panel", "text_size", "font"):
+            assert by[name].get("advanced") is True, (wid, name)
+        for name in ("style", "custom_style", "build_medium", "view", "model"):
+            assert by[name]["show_if"]["pictures"] == "paintings", (wid, name)
+        try:
+            old = json.loads(subprocess.run(["git", "-C", str(ROOT), "show", f"{RELEASED}:{wid}/plugin.json"], capture_output=True, check=True).stdout)
+        except (OSError, subprocess.CalledProcessError):
+            continue  # a copy without the history
+        old = {o["name"]: o for o in old["cell_options"]}
+        assert set(old) == set(by), wid
+        for name, o in old.items():
+            n = by[name]
+            assert (n["type"], n.get("default"), [c["value"] for c in n.get("choices", [])]) == (o["type"], o.get("default"), [c["value"] for c in o.get("choices", [])]), (wid, name)
+    tonight_opts = {o["name"]: o for o in json.loads((ROOT / "orbit_tonight" / "plugin.json").read_text(encoding="utf-8"))["cell_options"]}
+    for name in ("scale", "packing"):
+        assert tonight_opts[name]["show_if"] == {"layout": "cluster"} and tonight_opts[name]["advanced"] is True
 
 def test_sgp4_stays_in_orbit_and_refuses_deep_space():
     el = SGP4.Elements.from_omm(ISS)

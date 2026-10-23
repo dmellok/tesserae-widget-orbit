@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-VERSION = "0.2.1"
+VERSION = "0.2.2"
 TESSERAE_MIN = "0.463.0"
 
 _spec = _ilu.spec_from_file_location("_tesserae_plugins.orbit_core.paint", ROOT / "orbit_core" / "lib" / "paint.py")
@@ -35,13 +35,27 @@ def sel(name, label, default, choices, **kw):
     return {"name": name, "type": "select", "label": label, "default": default, "choices": [{"value": v, "label": l} for v, l in choices], **kw}
 
 
+def adv(option):
+    """Fine-tuning: Tesserae folds these into a collapsed More options at the end of the panel."""
+    return {**option, "advanced": True}
+
+
+# The panel reads as Fugleramme's: the place, what the widget shows, how many, the pictures and
+# the paper up front; what one choice needs nested under it; the fine-tuning under More options.
+
+
 def where_options():
     return [
         {"name": "location", "type": "location_search", "label": "Place", "default": "", "help": "Where you will be looking up from; the times are the place's own. Falls back to the app's location."},
+    ]
+
+
+def sky_options():
+    return [adv(o) for o in [
         sel("which", "Which objects", "bright", [("bright", "The stations and the brightest satellites (CelesTrak's visual list)"), ("stations", "The space stations only")], help="The visual list is the hundred-odd objects bright enough to see with the eye: the stations, Hubble, big satellites and spent rocket stages."),
         sel("min_el", "At least this high", "20", [("10", "10° (low over the horizon)"), ("20", "20°"), ("30", "30°"), ("45", "45° (high overhead)")], help="A pass counts when the object climbs at least this high while lit and the sky is dark."),
         sel("hours", "Looking ahead", "24", [("12", "12 hours"), ("24", "24 hours"), ("36", "36 hours")]),
-    ]
+    ]]
 
 
 def picture_options(with_backdrop: bool, scene: bool = False):
@@ -56,22 +70,33 @@ def picture_options(with_backdrop: bool, scene: bool = False):
     out.append({"name": "build_extra", "type": "string", "label": "Your own words", "default": "", "show_if": {"pictures": "paintings", "style": "builder"}, "help": "Added to the style: for example, with a little gold leaf on the solar panels."})
     if with_backdrop:
         out.append(sel("backdrop", "Backdrop", "space" if scene else "none", BACKDROPS if not scene else BACKDROPS[1:], show_if=show, help="None keeps the spacecraft alone on the page, cut out. The rest paint a whole picture that fills its frame, in the same style."))
-    out.append(sel("view", "View", "side", [("side", "From the side, a little below"), ("quarter", "From a front quarter, a little above"), ("below", "From below, as it passes over you"), ("above", "From above, the Earth beyond")], show_if=show))
-    out.append(sel("model", "Model", "nano_banana", MODELS, show_if=show, help="All on fal.ai. Nano Banana is faithful and cheap; Nano Banana Pro and FLUX follow the more abstract styles further."))
     return out
 
 
-def page_options(paper_default="cream"):
+def painting_options():
+    show = {"pictures": "paintings"}
+    return [adv(o) for o in [
+        sel("view", "View", "side", [("side", "From the side, a little below"), ("quarter", "From a front quarter, a little above"), ("below", "From below, as it passes over you"), ("above", "From above, the Earth beyond")], show_if=show),
+        sel("model", "Model", "nano_banana", MODELS, show_if=show, help="All on fal.ai. Nano Banana is faithful and cheap; Nano Banana Pro and FLUX follow the more abstract styles further."),
+    ]]
+
+
+def paper_options(paper_default="cream"):
     return [
+        sel("paper", "Paper", paper_default, [("cream", "Cream"), ("white", "White"), ("aged", "Aged"), ("blueprint", "Blueprint: pale ink on blue"), ("night", "Night: pale ink on near-black")]),
+    ]
+
+
+def page_options():
+    return [adv(o) for o in [
         sel("chart", "Sky chart", "dome", [("dome", "The sky as a dome, north up, the path drawn across it"), ("none", "No chart")]),
         {"name": "title", "type": "string", "label": "Title", "default": "", "help": "Blank uses the place."},
         sel("header", "Title line", "top", [("top", "Above the page"), ("bottom", "Below the page"), ("hidden", "Hidden")]),
         sel("footer", "Foot of the page", "show", [("show", "Status and credits"), ("credits", "Credits only"), ("hide", "Nothing")]),
-        sel("paper", "Paper", paper_default, [("cream", "Cream"), ("white", "White"), ("aged", "Aged"), ("blueprint", "Blueprint: pale ink on blue"), ("night", "Night: pale ink on near-black")]),
         sel("panel", "Panel", "colour", [("colour", "Colour"), ("gray16", "16 greys"), ("gray4", "4 greys"), ("mono", "Black and white")], help="What the panel can show. Pictures are converted and contrast-stretched to match."),
         sel("text_size", "Text size", "100", [(v, f"{v}%") for v in ("60", "80", "100", "125", "150")]),
-        sel("font", "Type", "fell", [("fell", "IM Fell English: the old plate"), ("archivo", "Archivo Narrow: clean and plain"), ("georgia", "Georgia: a modern serif"), ("page", "The dashboard's own font")]),
-    ]
+        sel("font", "Typeface", "fell", [("fell", "IM Fell English: the old plate"), ("archivo", "Archivo Narrow: clean and plain"), ("georgia", "Georgia: a modern serif"), ("page", "The dashboard's own font")]),
+    ]]
 
 
 WIDGETS = {
@@ -79,23 +104,25 @@ WIDGETS = {
         "name": "Orbit: Pass",
         "icon": "ph-planet",
         "description": "The best pass over your place to-night: the station or the brightest satellite coming, painted in a ruled frame, with a sky chart of its path, the rise and set times and directions, how high and how bright. Passes worked out on your server from CelesTrak's element sets, no key.",
-        "options": lambda: where_options() + picture_options(True) + page_options(),
+        "options": lambda: where_options() + picture_options(True) + paper_options() + sky_options() + painting_options() + page_options(),
     },
     "orbit_tonight": {
         "name": "Orbit: To-night",
         "icon": "ph-shooting-star",
         "description": "Every visible pass over your place in the next day, in order: the station and the bright satellites, each with its small painting and a sky chart of its path, the times, the directions and how bright. Worked out on your server from CelesTrak's element sets, no key.",
-        "options": lambda: where_options() + [{"name": "count", "type": "number", "label": "How many", "default": 6, "help": "1 to 10."}] + picture_options(False) + [
+        "options": lambda: where_options() + [
             sel("layout", "Layout", "rows", [("rows", "Rows: each pass with its picture and sky chart"), ("cluster", "Cluster: the objects packed on the page, sized as they are, captioned")], help="The cluster packs each object's painting or silhouette as large as the page allows, the station a hundred metres across and a rocket stage ten, with its next pass captioned beneath."),
+            {"name": "count", "type": "number", "label": "How many", "default": 6, "help": "1 to 10."},
+        ] + picture_options(False) + paper_options() + sky_options() + painting_options() + [adv(o) for o in [
             {"name": "scale", "type": "slider", "label": "Scale", "default": 100, "min": 40, "max": 100, "step": 5, "unit": "%", "help": "How far the cluster runs out to the margins.", "show_if": {"layout": "cluster"}},
             sel("packing", "Packing", "balanced", [("balanced", "Balanced: grown to fill the page"), ("spiral", "Spiral: out from the middle (Fugleramme)"), ("voids", "Voids: the emptiest paper first (Fugleramme)")], show_if={"layout": "cluster"}, help="How the cluster is packed. Balanced packs from the middle and then grows each object into the room left. Spiral and Voids are Fugleramme's packers: Spiral sets each object, largest first, on the first free spot out from the middle, for a round cluster; Voids sets each on the emptiest paper it fits, so the page fills to the corners."),
-        ] + page_options(),
+        ]] + page_options(),
     },
     "orbit_scene": {
         "name": "Orbit: Scene",
         "icon": "ph-moon-stars",
         "description": "The best pass coming as one whole painting across the page: the spacecraft in black space, above the Earth's limb, over the Earth by day or by night or at an orbital sunrise, with the pass written over it and a sky chart in the corner.",
-        "options": lambda: where_options() + picture_options(True, scene=True) + page_options("night"),
+        "options": lambda: where_options() + picture_options(True, scene=True) + paper_options("night") + sky_options() + painting_options() + page_options(),
     },
 }
 

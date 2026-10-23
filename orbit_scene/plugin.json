@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "Orbit: Scene",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "kind": "widget",
   "tesserae_min": "0.463.0",
   "description": "The best pass coming as one whole painting across the page: the spacecraft in black space, above the Earth's limb, over the Earth by day or by night or at an orbital sunrise, with the pass written over it and a sky chart in the corner.",
@@ -32,68 +32,6 @@
       "label": "Place",
       "default": "",
       "help": "Where you will be looking up from; the times are the place's own. Falls back to the app's location."
-    },
-    {
-      "name": "which",
-      "type": "select",
-      "label": "Which objects",
-      "default": "bright",
-      "choices": [
-        {
-          "value": "bright",
-          "label": "The stations and the brightest satellites (CelesTrak's visual list)"
-        },
-        {
-          "value": "stations",
-          "label": "The space stations only"
-        }
-      ],
-      "help": "The visual list is the hundred-odd objects bright enough to see with the eye: the stations, Hubble, big satellites and spent rocket stages."
-    },
-    {
-      "name": "min_el",
-      "type": "select",
-      "label": "At least this high",
-      "default": "20",
-      "choices": [
-        {
-          "value": "10",
-          "label": "10° (low over the horizon)"
-        },
-        {
-          "value": "20",
-          "label": "20°"
-        },
-        {
-          "value": "30",
-          "label": "30°"
-        },
-        {
-          "value": "45",
-          "label": "45° (high overhead)"
-        }
-      ],
-      "help": "A pass counts when the object climbs at least this high while lit and the sky is dark."
-    },
-    {
-      "name": "hours",
-      "type": "select",
-      "label": "Looking ahead",
-      "default": "24",
-      "choices": [
-        {
-          "value": "12",
-          "label": "12 hours"
-        },
-        {
-          "value": "24",
-          "label": "24 hours"
-        },
-        {
-          "value": "36",
-          "label": "36 hours"
-        }
-      ]
     },
     {
       "name": "pictures",
@@ -572,6 +510,99 @@
       "help": "None keeps the spacecraft alone on the page, cut out. The rest paint a whole picture that fills its frame, in the same style."
     },
     {
+      "name": "paper",
+      "type": "select",
+      "label": "Paper",
+      "default": "night",
+      "choices": [
+        {
+          "value": "cream",
+          "label": "Cream"
+        },
+        {
+          "value": "white",
+          "label": "White"
+        },
+        {
+          "value": "aged",
+          "label": "Aged"
+        },
+        {
+          "value": "blueprint",
+          "label": "Blueprint: pale ink on blue"
+        },
+        {
+          "value": "night",
+          "label": "Night: pale ink on near-black"
+        }
+      ]
+    },
+    {
+      "name": "which",
+      "type": "select",
+      "label": "Which objects",
+      "default": "bright",
+      "choices": [
+        {
+          "value": "bright",
+          "label": "The stations and the brightest satellites (CelesTrak's visual list)"
+        },
+        {
+          "value": "stations",
+          "label": "The space stations only"
+        }
+      ],
+      "help": "The visual list is the hundred-odd objects bright enough to see with the eye: the stations, Hubble, big satellites and spent rocket stages.",
+      "advanced": true
+    },
+    {
+      "name": "min_el",
+      "type": "select",
+      "label": "At least this high",
+      "default": "20",
+      "choices": [
+        {
+          "value": "10",
+          "label": "10° (low over the horizon)"
+        },
+        {
+          "value": "20",
+          "label": "20°"
+        },
+        {
+          "value": "30",
+          "label": "30°"
+        },
+        {
+          "value": "45",
+          "label": "45° (high overhead)"
+        }
+      ],
+      "help": "A pass counts when the object climbs at least this high while lit and the sky is dark.",
+      "advanced": true
+    },
+    {
+      "name": "hours",
+      "type": "select",
+      "label": "Looking ahead",
+      "default": "24",
+      "choices": [
+        {
+          "value": "12",
+          "label": "12 hours"
+        },
+        {
+          "value": "24",
+          "label": "24 hours"
+        },
+        {
+          "value": "36",
+          "label": "36 hours"
+        }
+      ],
+      "advanced": true
+    },
+    {
       "name": "view",
       "type": "select",
       "label": "View",
@@ -596,7 +627,8 @@
       ],
       "show_if": {
         "pictures": "paintings"
-      }
+      },
+      "advanced": true
     },
     {
       "name": "model",
@@ -628,7 +660,8 @@
       "show_if": {
         "pictures": "paintings"
       },
-      "help": "All on fal.ai. Nano Banana is faithful and cheap; Nano Banana Pro and FLUX follow the more abstract styles further."
+      "help": "All on fal.ai. Nano Banana is faithful and cheap; Nano Banana Pro and FLUX follow the more abstract styles further.",
+      "advanced": true
     },
     {
       "name": "chart",
@@ -644,14 +677,16 @@
           "value": "none",
           "label": "No chart"
         }
-      ]
+      ],
+      "advanced": true
     },
     {
       "name": "title",
       "type": "string",
       "label": "Title",
       "default": "",
-      "help": "Blank uses the place."
+      "help": "Blank uses the place.",
+      "advanced": true
     },
     {
       "name": "header",
@@ -671,7 +706,8 @@
           "value": "hidden",
           "label": "Hidden"
         }
-      ]
+      ],
+      "advanced": true
     },
     {
       "name": "footer",
@@ -691,35 +727,8 @@
           "value": "hide",
           "label": "Nothing"
         }
-      ]
-    },
-    {
-      "name": "paper",
-      "type": "select",
-      "label": "Paper",
-      "default": "night",
-      "choices": [
-        {
-          "value": "cream",
-          "label": "Cream"
-        },
-        {
-          "value": "white",
-          "label": "White"
-        },
-        {
-          "value": "aged",
-          "label": "Aged"
-        },
-        {
-          "value": "blueprint",
-          "label": "Blueprint: pale ink on blue"
-        },
-        {
-          "value": "night",
-          "label": "Night: pale ink on near-black"
-        }
-      ]
+      ],
+      "advanced": true
     },
     {
       "name": "panel",
@@ -744,7 +753,8 @@
           "label": "Black and white"
         }
       ],
-      "help": "What the panel can show. Pictures are converted and contrast-stretched to match."
+      "help": "What the panel can show. Pictures are converted and contrast-stretched to match.",
+      "advanced": true
     },
     {
       "name": "text_size",
@@ -772,12 +782,13 @@
           "value": "150",
           "label": "150%"
         }
-      ]
+      ],
+      "advanced": true
     },
     {
       "name": "font",
       "type": "select",
-      "label": "Type",
+      "label": "Typeface",
       "default": "fell",
       "choices": [
         {
@@ -796,7 +807,8 @@
           "value": "page",
           "label": "The dashboard's own font"
         }
-      ]
+      ],
+      "advanced": true
     }
   ],
   "data_schema": {
