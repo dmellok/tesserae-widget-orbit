@@ -128,7 +128,7 @@ def _ready(widget, opts, tmp_path, settings=SETTINGS, timeout=30.0):
 def test_manifests_and_client_files():
     for wid in ("orbit_core", "orbit_pass", "orbit_tonight", "orbit_scene"):
         m = json.loads((ROOT / wid / "plugin.json").read_text(encoding="utf-8"))
-        assert m["version"] == "0.2.2" and m["tesserae_min"] == "0.463.0"
+        assert m["version"] == "0.2.3" and m["tesserae_min"] == "0.463.0"
         if m["kind"] == "widget":
             assert m["render"]["warm_ahead_s"] == 150 and (ROOT / wid / "client.js").exists()
             names = [o["name"] for o in m["cell_options"]]

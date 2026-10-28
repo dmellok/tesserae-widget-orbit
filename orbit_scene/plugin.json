@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "Orbit: Scene",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "kind": "widget",
   "tesserae_min": "0.463.0",
   "description": "The best pass coming as one whole painting across the page: the spacecraft in black space, above the Earth's limb, over the Earth by day or by night or at an orbital sunrise, with the pass written over it and a sky chart in the corner.",

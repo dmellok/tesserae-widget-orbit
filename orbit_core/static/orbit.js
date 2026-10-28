@@ -151,6 +151,58 @@ function tonightPage(d) {
 const SIZE_M = { station: 109, telescope: 13, satellite: 8, rocket: 11, other: 6 };
 const SIL_URL = (cls) => 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="400" height="400" fill="#7a7a7a"><path d="${SIL[cls] || SIL.other}"/></svg>`);
 
+/* ---- building the sheet without holding the page ----
+   The packer runs in one module worker (OffscreenCanvas) so the page, and an editor showing it,
+   stay responsive while the sheet is built; the page builds the sheet itself where workers are
+   missing or one fails. A sheet is kept by a key of everything that decides it, so a page drawn
+   again from the same data (an editor's refresh while pictures are on the way) is not packed
+   again. */
+const WORKER_PATH = './sheet.js';
+let WORKER = null;
+let CHAIN = Promise.resolve();
+function packOffThread(args) {
+  if (typeof Worker === 'undefined' || typeof OffscreenCanvas === 'undefined') return buildSheet(args);
+  const run = () => new Promise((resolve) => {
+    try { if (!WORKER) WORKER = new Worker(new URL(WORKER_PATH, import.meta.url), { type: 'module' }); } catch { resolve(buildSheet(args)); return; }
+    const w = WORKER;
+    let done = false;
+    const finish = (sheet) => { if (done) return; done = true; clearTimeout(timer); w.onmessage = null; w.onerror = null; resolve(sheet); };
+    const drop = () => { if (WORKER === w) WORKER = null; try { w.terminate(); } catch { /* gone */ } };
+    const timer = setTimeout(() => { drop(); finish(buildSheet(args)); }, 60000);
+    w.onmessage = (e) => { if (e.data && e.data.kind === 'cut') return; finish(e.data && e.data.ok ? e.data.sheet : buildSheet(args)); };
+    w.onerror = () => { drop(); finish(buildSheet(args)); };
+    w.postMessage(args);
+  });
+  CHAIN = CHAIN.then(run, run);
+  return CHAIN;
+}
+const fnv = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); };
+function keyOf(a) {
+  const parts = a.specimens.map((x) => `${x.name}|${x.sci}|${x.src ? x.src.length : 0}|${x.whole ? 1 : 0}|${x.factor}|${x.aspect}|${(x.lines || []).join('/')}`);
+  return `sh1:${a.ratio.toFixed(4)}:${a.size}:${a.label.toFixed(4)}:${a.paper}:${a.packer || ''}:${a.zoom}:${a.budget}:${fnv(parts.join(';'))}`;
+}
+const SHEETS = new Map();
+const SHEETS_MAX = 8;
+
+/* A silhouette as a PNG, drawn once per kind: a worker cannot decode the SVG itself. */
+const SIL_PNG = new Map();
+async function silPng(cls) {
+  const k = SIL[cls] ? cls : 'other';
+  if (SIL_PNG.has(k)) return SIL_PNG.get(k);
+  let out = SIL_URL(k);
+  try {
+    const img = new Image();
+    img.src = SIL_URL(k);
+    await img.decode();
+    const cv = document.createElement('canvas');
+    cv.width = 400; cv.height = 400;
+    cv.getContext('2d').drawImage(img, 0, 0, 400, 400);
+    out = cv.toDataURL('image/png');
+  } catch { /* the SVG as it is */ }
+  SIL_PNG.set(k, out);
+  return out;
+}
+
 async function packTonight(d) {
   const w = d.cell_w || 800, h = d.cell_h || 480;
   const seen = new Set();
@@ -159,7 +211,7 @@ async function packTonight(d) {
     if (seen.has(p.norad)) continue;  // one picture per object, however many passes
     seen.add(p.norad);
     const pic = p.pic || {};
-    const src = pic.src || SIL_URL(p.cls);
+    const src = pic.src || await silPng(p.cls);
     const whole = !!pic.src && !!pic.whole;
     specimens.push({
       name: String(p.norad), sci: p.shown_name, src, cut: whole ? null : src, on_paper: false, classic: false, whole, neutral: false, no_flip: true,
@@ -170,8 +222,18 @@ async function packTonight(d) {
   const label = Math.max(0.017, 13 / h) * ((Number(d.text_size) || 100) / 100);
   const zoom = Math.max(0.4, Math.min(1, (Number(d.scale) || 100) / 100));
   const packer = ['spiral', 'voids'].includes(d.packing) ? d.packing : 'balanced';
+  // while pictures are still on the way the page is drawn again soon: a quicker arrangement
+  const budget = Number(d.live_refresh_s) > 0 ? 1500 : 4000;
+  const args = { specimens, ratio: w / h, size: 1400, label, paper: ['white', 'aged', 'night', 'blueprint'].includes(d.paper) ? d.paper : 'cream', ink: INK[d.paper] || INK.cream, layout: 'cluster', packer, facing: 'inward', zoom , budget };
+  const key = keyOf(args);
+  if (SHEETS.has(key)) return SHEETS.get(key);
   try {
-    return await buildSheet({ specimens, ratio: w / h, size: 1400, label, paper: ['white', 'aged', 'night', 'blueprint'].includes(d.paper) ? d.paper : 'cream', ink: INK[d.paper] || INK.cream, layout: 'cluster', packer, facing: 'inward', zoom });
+    const made = await packOffThread(args);
+    if (made && made.src) {
+      SHEETS.set(key, made);
+      while (SHEETS.size > SHEETS_MAX) SHEETS.delete(SHEETS.keys().next().value);
+    }
+    return made;
   } catch (e) { console.warn('orbit: packing failed', e); return null; }
 }
 
